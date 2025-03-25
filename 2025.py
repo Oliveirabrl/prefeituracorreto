@@ -7,20 +7,12 @@ st.set_page_config(layout="wide")
 st.title("Gastos da Prefeitura")
 st.text("Painel de gastos da Prefeitura de Lagarto/Sergipe")
 
-# Mensagem inicial para depuração
-st.write("Iniciando o carregamento do dashboard...")
-
 # Verifica se o arquivo 2025.xlsx existe
 file_path = "2025.xlsx"
-st.write(f"Verificando se o arquivo '{file_path}' existe no servidor...")
 if os.path.exists(file_path):
-    st.write("Arquivo encontrado com sucesso!")
-    
     # Tenta carregar os dados do Excel
     try:
-        st.write("Carregando os dados do arquivo 2025.xlsx, aba 'aaa'...")
         dados = pd.read_excel(file_path, sheet_name="aaa")
-        st.write("Dados carregados com sucesso!")
         
         # Renomeia as colunas
         dados = dados.rename(columns={"Empenhado": "Projetado"})
@@ -83,6 +75,3 @@ if os.path.exists(file_path):
 else:
     st.error(f"Erro: O arquivo '{file_path}' não foi encontrado no servidor!")
     st.write("Certifique-se de que o arquivo '2025.xlsx' foi enviado ao repositório no GitHub.")
-
-# Mensagem final para depuração
-st.write("Fim do carregamento do dashboard.")
