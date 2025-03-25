@@ -4,8 +4,8 @@ import os
 
 # Configurações do dashboard
 st.set_page_config(layout="wide")
-st.title("Gastosssssssss da Prefeitura")
-st.text("Painel de gastoddddddds da Prefeitura de Lagarto/Sergipe")
+st.title("Gastos da Prefeitura")
+st.text("Painel de gastos da Prefeitura de Lagarto/Sergipe")
 
 # Verifica se o arquivo 2025.xlsx existe
 file_path = "2025.xlsx"
