@@ -9,6 +9,11 @@ st.text("Painel de gastos da Prefeitura de Lagarto/Sergipe")
 # URL do CSV gerado pelo Google Sheets
 csv_url = "https://docs.google.com/spreadsheets/d/1laPuYWWQD3BJRWI_bpwpGg115Ie7mLrqv_jtH7dPgLk/export?format=csv&gid=741206008"
 
+# Botão para recarregar os dados
+if st.button("Atualizar Dados"):
+    st.cache_data.clear()  # Limpa o cache para forçar o recarregamento
+    st.experimental_rerun()  # Recarrega o app
+
 # Tenta carregar os dados do Google Sheets
 try:
     dados = pd.read_csv(csv_url)
@@ -71,3 +76,4 @@ except Exception as e:
     st.write("Possíveis causas:")
     st.write("- O link CSV está incorreto ou a planilha não está pública.")
     st.write("- A aba ou os dados não estão acessíveis.")
+    
