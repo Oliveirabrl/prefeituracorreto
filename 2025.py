@@ -45,10 +45,7 @@ try:
         dados_filtrados = dados[dados['Quem Recebeu'].str.contains(nome_filtro, case=False, na=False)]
         # Exibir a imagem e o áudio com autoplay
         try:
-            # Imagem centralizada
-            st.markdown(
-                '<img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRqQMqqLTMPHLa5ADtDcfz7XYhwYWI92SYifQ&s" class="centered-image" width="300">',
-                unsafe_allow_html=True
+         
             )
            
             # Áudio com autoplay (tema de Missão Impossível)
