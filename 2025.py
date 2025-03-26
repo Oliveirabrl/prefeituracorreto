@@ -6,6 +6,14 @@ st.set_page_config(layout="wide")
 st.title("Gastos da Prefeitura")
 st.text("Painel de gastos da Prefeitura de Lagarto/Sergipe")
 
+# Aviso sobre a origem dos dados
+st.markdown(
+    """
+    **Aviso:** Este dashboard utiliza dados públicos disponíveis no site oficial da Prefeitura de Lagarto/Sergipe. 
+    O objetivo é promover a transparência e facilitar o acesso às informações sobre os gastos públicos.
+    """
+)
+
 # URL do CSV gerado pelo Google Sheets
 csv_url = "https://docs.google.com/spreadsheets/d/1laPuYWWQD3BJRWI_bpwpGg115Ie7mLrqv_jtH7dPgLk/export?format=csv&gid=741206008"
 
