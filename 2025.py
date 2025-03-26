@@ -17,19 +17,13 @@ try:
     dados = dados.rename(columns={"Empenhado": "Projetado"})
     dados = dados.rename(columns={"Credor": "Quem Recebeu"})
     
-    # Injetar CSS personalizado para mudar a cor do texto e centralizar a imagem
+    # Injetar CSS personalizado para mudar a cor do texto
     st.markdown(
         """
         <style>
         /* Estiliza o texto digitado no campo de entrada */
         input[type="text"] {
             color: #FF0000 !important; /* Cor vermelha, pode mudar para outra */
-        }
-        /* Centraliza a imagem */
-        .centered-image {
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
         }
         </style>
         """,
@@ -43,18 +37,15 @@ try:
     # Filtrar os dados
     if nome_filtro:
         dados_filtrados = dados[dados['Quem Recebeu'].str.contains(nome_filtro, case=False, na=False)]
-        # Exibir a imagem e o áudio com autoplay
+        # Exibir o áudio com autoplay (tema de Missão Impossível)
         try:
-         
-            )
-           
-            # Áudio com autoplay (tema de Missão Impossível)
+            # Áudio com autoplay
             st.markdown(
                 '<audio src="https://www.myinstants.com/media/sounds/mission-impossible-theme.mp3" autoplay>',
                 unsafe_allow_html=True
             )
         except Exception as e:
-            st.error(f"Erro ao carregar a imagem ou áudio: {e}")
+            st.error(f"Erro ao carregar o áudio: {e}")
     else:
         dados_filtrados = dados
 
