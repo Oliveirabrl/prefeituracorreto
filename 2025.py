@@ -55,7 +55,7 @@ try:
            
             # Áudio com autoplay
             st.markdown(
-                '<audio src="https://www.myinstants.com/media/sounds/joker-laugh.mp3" autoplay>',
+                '<audio src="https://www.myinstants.com/pt/instant/musica-mision-imposible-51722/?utm_source=copy&utm_medium=share" autoplay>',
                 unsafe_allow_html=True
             )
         except Exception as e:
