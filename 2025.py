@@ -9,8 +9,6 @@ st.text("Painel de gastos da Prefeitura de Lagarto/Sergipe")
 # URL do CSV gerado pelo Google Sheets
 csv_url = "https://docs.google.com/spreadsheets/d/1laPuYWWQD3BJRWI_bpwpGg115Ie7mLrqv_jtH7dPgLk/export?format=csv&gid=741206008"
 
-
-
 # Tenta carregar os dados do Google Sheets
 try:
     dados = pd.read_csv(csv_url)
@@ -53,9 +51,9 @@ try:
                 unsafe_allow_html=True
             )
            
-            # Áudio com autoplay
+            # Áudio com autoplay (tema de Missão Impossível)
             st.markdown(
-                '<audio src="https://www.myinstants.com/pt/instant/musica-mision-imposible-51722/?utm_source=copy&utm_medium=share" autoplay>',
+                '<audio src="https://www.myinstants.com/media/sounds/mission-impossible-theme.mp3" autoplay>',
                 unsafe_allow_html=True
             )
         except Exception as e:
@@ -73,4 +71,3 @@ except Exception as e:
     st.write("Possíveis causas:")
     st.write("- O link CSV está incorreto ou a planilha não está pública.")
     st.write("- A aba ou os dados não estão acessíveis.")
-    
