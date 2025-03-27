@@ -45,11 +45,11 @@ try:
     # Filtrar os dados
     if nome_filtro:
         dados_filtrados = dados[dados['Quem Recebeu'].str.contains(nome_filtro, case=False, na=False)]
-        # Exibir o áudio com autoplay (Needle In A Haystack)
+        # Exibir o áudio com autoplay (usando arquivo local)
         try:
             # Áudio com autoplay
             st.markdown(
-                '<audio src="https://www.fesliyanstudios.com/play-mp3/7036" autoplay>',
+                '<audio src="suspense_audio.mp3" autoplay>',
                 unsafe_allow_html=True
             )
         except Exception as e:
