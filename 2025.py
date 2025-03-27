@@ -1,4 +1,4 @@
-iimport streamlit as st
+import streamlit as st
 import pandas as pd
 
 # Configurações do dashboard
@@ -45,11 +45,11 @@ try:
     # Filtrar os dados
     if nome_filtro:
         dados_filtrados = dados[dados['Quem Recebeu'].str.contains(nome_filtro, case=False, na=False)]
-        # Exibir o áudio com autoplay (usando link do GitHub)
+        # Exibir o áudio com autoplay (usando link do Pixabay - Dark Suspense)
         try:
             # Áudio com autoplay
             st.markdown(
-                '<audio src="https://raw.githubusercontent.com/Oliveirabrl/prefeituracorreto/master/suspense_audio.mp3" autoplay>',
+                '<audio src="https://cdn.pixabay.com/audio/2023/03/15/audio_6f1b0b2b2b.mp3" autoplay>',
                 unsafe_allow_html=True
             )
         except Exception as e:
