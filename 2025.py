@@ -38,8 +38,8 @@ try:
         unsafe_allow_html=True
     )
 
-    # Rótulo e campo de entrada para o filtro
-    st.markdown("<p style='font-size: 16px; margin-bottom: -10px;'>QUEM RECEBEU ?? ----- Digite o nome para filtrar: ---------- DICAS; pode ser; Nome, Sobrenome ou CNPJ</p>", unsafe_allow_html=True)
+    # Rótulo e campo de entrada para o filtro (frase em amarelo e maior)
+    st.markdown("<p style='font-size: 20px; margin-bottom: -10px; color: yellow;'>QUEM RECEBEU ?? ----- Digite o nome para filtrar: ---------- DICAS: pode ser Nome, Sobrenome ou CNPJ</p>", unsafe_allow_html=True)
     nome_filtro = st.text_input("", placeholder="Digite aqui...")
 
     # Filtrar os dados
