@@ -1,13 +1,14 @@
+# Importação das bibliotecas necessárias
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Configurações do dashboard
+# Configurações iniciais do dashboard
 st.set_page_config(layout="wide")
 st.title("📊 Gastos da Prefeitura")
 st.text("Painel de gastos da Prefeitura de Lagarto/Sergipe")
 
-# Seção 1: Sobre os Dados
+# Seção 1: Sobre os Dados (expander com informações sobre a origem dos dados)
 with st.expander("ℹ️ Sobre os Dados"):
     st.markdown(
         """
@@ -16,12 +17,12 @@ with st.expander("ℹ️ Sobre os Dados"):
         """
     )
 
-# Função para carregar dados com cache
+# Função para carregar os dados com cache para melhorar a performance
 @st.cache_data
 def load_data(url):
     return pd.read_csv(url)
 
-# URL do CSV
+# URL do CSV com os dados
 csv_url = "https://docs.google.com/spreadsheets/d/1laPuYWWQD3BJRWI_bpwpGg115Ie7mLrqv_jtH7dPgLk/export?format=csv&gid=741206008"
 
 # Carregar e processar os dados
@@ -30,10 +31,10 @@ try:
         dados = load_data(csv_url)
         dados = dados.rename(columns={"Empenhado": "Projetado", "Credor": "Quem Recebeu"})
         
-        # Limpeza robusta da coluna 'Projetado'
+        # Limpeza robusta da coluna 'Projetado' para conversão em valores numéricos
         dados['Projetado'] = dados['Projetado'].astype(str)
-        dados['Projetado'] = dados['Projetado'].str.replace('R\$', '', regex=True).str.strip()
-        dados['Projetado'] = dados['Projetado'].str.replace('\.', '', regex=True)
+        dados['Projetado'] = dados['Projetado'].str.replace(r'R\$', '', regex=True).str.strip()
+        dados['Projetado'] = dados['Projetado'].str.replace(r'\.', '', regex=True)
         dados['Projetado'] = dados['Projetado'].str.replace(',', '.', regex=False)
         dados['Projetado'] = pd.to_numeric(dados['Projetado'], errors='coerce')
 
@@ -66,7 +67,7 @@ try:
     setor_mais_registros = max(registros_por_setor, key=registros_por_setor.get)
     num_registros_mais = registros_por_setor[setor_mais_registros]
 
-    # Exibir resumo
+    # Exibir resumo em colunas
     cols_resumo = st.columns(3)
     with cols_resumo[0]:
         st.metric("Total Gasto", f"R$ {total_gasto:,.2f}")
@@ -87,7 +88,7 @@ try:
         dados_filtrados = dados_filtrados[dados_filtrados['Quem Recebeu'].str.contains(nome_filtro, case=False, na=False)]
         filtro_aplicado = True
 
-    # Mensagem "Aplique um filtro para visualizar os dados" logo abaixo do filtro
+    # Mensagem para aplicar filtro
     if not filtro_aplicado:
         st.write("Aplique um filtro para visualizar os dados.")
 
