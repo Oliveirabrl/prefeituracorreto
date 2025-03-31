@@ -46,7 +46,7 @@ try:
 
     # Calcular gasto e número de registros por setor
     setores = {
-        "Postos de Combustíveis": ["posto", "auto posto"],
+        "Postos de Combustíveis": ["posto", "auto posto","Combustíveis"],
         "Farmácia": ["farmácia"],
         "Advogados Associados": ["advogados associados", "advogado", "advocacia"],
         "Construção": ["construção", "construtora", "empreendimentos"],
