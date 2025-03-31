@@ -5,8 +5,8 @@ import plotly.express as px
 
 # Configurações iniciais do dashboard
 st.set_page_config(layout="wide")
-st.title("📊 Gastos da Prefeitura")
-st.text("Painel de gastos da Prefeitura de Lagarto/Sergipe")
+st.title("📊 Gastos da Prefeitura - Desde 01/01/2025")
+st.text("Gastos da Prefeitura de Lagarto/Sergipe, atualizados mensalmente")
 
 # Seção 1: Sobre os Dados (expander com informações sobre a origem dos dados)
 with st.expander("ℹ️ Sobre os Dados"):
@@ -46,7 +46,7 @@ try:
 
     # Calcular gasto e número de registros por setor
     setores = {
-        "Posto": ["posto", "auto posto"],
+        "Postos de Combustíveis": ["posto", "auto posto"],
         "Farmácia": ["farmácia"],
         "Advogados Associados": ["advogados associados", "advogado", "advocacia"],
         "Construção": ["construção", "construtora", "empreendimentos"],
