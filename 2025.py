@@ -46,7 +46,7 @@ try:
 
     # Calcular gasto e número de registros por setor
     setores = {
-        "Postos de Combustíveis": ["posto", "auto posto","Combustíveis"],
+        "Postos de Combustíveis": ["posto", "auto posto", "Combustíveis"],
         "Farmácia": ["farmácia"],
         "Advogados Associados": ["advogados associados", "advogado", "advocacia"],
         "Construção": ["construção", "construtora", "empreendimentos"],
@@ -112,7 +112,7 @@ try:
     st.divider()
     st.subheader("Gastos por Setor")
     cores_setores = {
-        "Posto": "#FFD700",  # Amarelo
+        "Postos de Combustíveis": "#FFD700",  # Amarelo
         "Farmácia": "#98FB98",  # Verde claro
         "Advogados Associados": "#FFA07A",  # Salmão
         "Construção": "#87CEEB",  # Azul claro
