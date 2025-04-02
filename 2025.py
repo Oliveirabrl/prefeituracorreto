@@ -2,9 +2,36 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import base64
+
+# Função para converter imagem local em base64
+def get_base64_image(file_path):
+    with open(file_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode()
 
 # Configurações iniciais do dashboard
 st.set_page_config(layout="wide")
+
+# Caminho da logo (ajuste conforme o nome e localização do arquivo)
+logo_path = "ibkr_logo.png"  # Se estiver em uma subpasta, use por exemplo "assets/ibkr_logo.png"
+logo_base64 = get_base64_image(logo_path)
+
+# Adicionar a logo, a frase e o link no canto superior direito com CSS
+st.markdown(
+    f"""
+    <div style="position: absolute; top: 10px; right: 10px; text-align: right;">
+        <img src="data:image/png;base64,{logo_base64}" alt="IBKR Logo" style="width: 100px; margin: 5px 0;">
+        <p style="color: #FFFFFF; font-size: 12px; margin: 5px 0 5px 0; line-height: 1.2;">
+            INVISTA EM MAIS DE<br>160 MERCADOS<br>EM TODO O MUNDO
+        </p>
+        <a href="https://ibkr.com/referral/edgleison239" target="_blank" style="color: #1E90FF; font-weight: bold; text-decoration: none; display: inline-block; padding: 5px 10px;">
+            CLIQUE AQUI
+        </a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 st.title("📊 Gastos da Prefeitura - Desde 01/01/2025")
 st.text("Gastos da Prefeitura de Lagarto/Sergipe, atualizados mensalmente")
 
