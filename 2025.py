@@ -12,15 +12,17 @@ def get_base64_image(file_path):
 # Configurações iniciais do dashboard
 st.set_page_config(layout="wide")
 
-# Caminho da logo (ajuste conforme o nome e localização do arquivo)
-logo_path = "ibkr_logo.png"  # Se estiver em uma subpasta, use por exemplo "assets/ibkr_logo.png"
-logo_base64 = get_base64_image(logo_path)
+# Carregar as duas logos
+logo_ibkr_path = "ibkr_logo.png"  # Logo da Interactive Brokers
+logo_os_path = "os.png"  # Nova logo da OS
+logo_ibkr_base64 = get_base64_image(logo_ibkr_path)
+logo_os_base64 = get_base64_image(logo_os_path)
 
-# Adicionar a logo, a frase e o link no canto superior direito com CSS
+# Adicionar a logo da Interactive Brokers, a frase e o link no canto superior direito
 st.markdown(
     f"""
     <div style="position: absolute; top: 10px; right: 10px; text-align: right;">
-        <img src="data:image/png;base64,{logo_base64}" alt="IBKR Logo" style="width: 100px; margin: 5px 0;">
+        <img src="data:image/png;base64,{logo_ibkr_base64}" alt="IBKR Logo" style="width: 100px; margin: 5px 0;">
         <p style="color: #FFFFFF; font-size: 12px; margin: 5px 0 5px 0; line-height: 1.2;">
             INVISTA EM MAIS DE<br>160 MERCADOS<br>EM TODO O MUNDO
         </p>
@@ -74,7 +76,7 @@ try:
     # Calcular gasto e número de registros por setor
     setores = {
         "Postos de Combustíveis": ["posto", "auto posto", "Combustíveis"],
-        "Farmácia": ["farmácia"],
+        "Farmácia": ["farmácia","Remédio"],
         "Advogados Associados": ["advogados associados", "advogado", "advocacia"],
         "Construção": ["construção", "construtora", "empreendimentos"],
         "Educação": ["escola", "educacional", "educação"],
@@ -94,14 +96,30 @@ try:
     setor_mais_registros = max(registros_por_setor, key=registros_por_setor.get)
     num_registros_mais = registros_por_setor[setor_mais_registros]
 
-    # Exibir resumo em colunas
-    cols_resumo = st.columns(3)
+    # Exibir resumo em colunas (com 4 colunas para incluir a nova seção)
+    cols_resumo = st.columns(4)
     with cols_resumo[0]:
         st.metric("Total Gasto", f"R$ {total_gasto:,.2f}")
     with cols_resumo[1]:
         st.metric("Maior Gasto", f"R$ {maior_gasto:,.2f}", f"Por: {maior_gasto_credor}")
     with cols_resumo[2]:
         st.metric("Setor com Mais Registros", setor_mais_registros, f"{num_registros_mais} registros")
+    with cols_resumo[3]:
+        # Adicionar a frase, a nova logo e o link ao lado direito do "Setor com mais registros"
+        st.markdown(
+            f"""
+            <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                <p style="color: #FFFFFF; font-size: 12px; margin: 5px 0;">
+                    ELABORADO POR:
+                </p>
+                <img src="data:image/png;base64,{logo_os_base64}" alt="OS Logo" style="width: 100px; margin: 5px 0;">
+                <a href="https://oscapitaloficial.com.br/" target="_blank" style="color: #1E90FF; font-weight: bold; text-decoration: none; padding: 5px 10px;">
+                    CLIQUE AQUI
+                </a>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     # Seção 3: Filtro da Lista de Gastos
     st.subheader("Lista de Gastos")
