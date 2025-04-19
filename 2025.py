@@ -2,38 +2,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import base64
-
-# Função para converter imagem local em base64
-def get_base64_image(file_path):
-    with open(file_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode()
 
 # Configurações iniciais do dashboard
 st.set_page_config(layout="wide")
-
-# Carregar as duas logos
-logo_ibkr_path = "ibkr_logo.png"  # Logo da Interactive Brokers
-logo_os_path = "os.png"  # Nova logo da OS
-logo_ibkr_base64 = get_base64_image(logo_ibkr_path)
-logo_os_base64 = get_base64_image(logo_os_path)
-
-# Adicionar a logo da Interactive Brokers, a frase e o link no canto superior direito
-st.markdown(
-    f"""
-    <div style="position: absolute; top: 10px; right: 10px; text-align: right;">
-        <img src="data:image/png;base64,{logo_ibkr_base64}" alt="IBKR Logo" style="width: 100px; margin: 5px 0;">
-        <p style="color: #FFFFFF; font-size: 12px; margin: 5px 0 5px 0; line-height: 1.2;">
-            INVISTA EM MAIS DE<br>160 MERCADOS<br>EM TODO O MUNDO
-        </p>
-        <a href="https://ibkr.com/referral/edgleison239" target="_blank" style="color: #1E90FF; font-weight: bold; text-decoration: none; display: inline-block; padding: 5px 10px;">
-            CLIQUE AQUI
-        </a>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
 st.title("📊 Gastos da Prefeitura - Desde 01/01/2025")
 st.text("Gastos da Prefeitura de Lagarto/Sergipe, atualizados mensalmente")
 
@@ -42,7 +13,7 @@ with st.expander("ℹ️ Sobre os Dados"):
     st.markdown(
         """
         **Aviso:** Este dashboard utiliza dados públicos disponíveis no site oficial da Prefeitura de Lagarto/Sergipe. 
-        O objetivo é promover a transparência e facilitar o acesso às informações sobre os gastos públicos.
+        O objetivo é promover a transparência e facilitar o acesso às informações sobre os gastos públicos.(Lei de Acesso à Informação (Lei nº 12.527/2011)
         """
     )
 
@@ -51,13 +22,16 @@ with st.expander("ℹ️ Sobre os Dados"):
 def load_data(url):
     return pd.read_csv(url)
 
-# URL do CSV com os dados
-csv_url = "https://docs.google.com/spreadsheets/d/1laPuYWWQD3BJRWI_bpwpGg115Ie7mLrqv_jtH7dPgLk/export?format=csv&gid=741206008"
+# URL do CSV com os dados de gastos
+csv_gastos_url = "https://docs.google.com/spreadsheets/d/1laPuYWWQD3BJRWI_bpwpGg115Ie7mLrqv_jtH7dPgLk/export?format=csv&gid=741206008"
 
-# Carregar e processar os dados
+# URL do CSV com os dados de receitas
+csv_receitas_url = "https://docs.google.com/spreadsheets/d/1laPuYWWQD3BJRWI_bpwpGg115Ie7mLrqv_jtH7dPgLk/export?format=csv&gid=342964392"
+
+# Carregar e processar os dados de gastos
 try:
     with st.spinner("Carregando dados..."):
-        dados = load_data(csv_url)
+        dados = load_data(csv_gastos_url)
         dados = dados.rename(columns={"Empenhado": "Projetado", "Credor": "Quem Recebeu"})
         
         # Limpeza robusta da coluna 'Projetado' para conversão em valores numéricos
@@ -66,6 +40,28 @@ try:
         dados['Projetado'] = dados['Projetado'].str.replace(r'\.', '', regex=True)
         dados['Projetado'] = dados['Projetado'].str.replace(',', '.', regex=False)
         dados['Projetado'] = pd.to_numeric(dados['Projetado'], errors='coerce')
+
+    # Carregar e processar os dados de receitas
+    try:
+        with st.spinner("Carregando dados de receitas..."):
+            dados_receitas = load_data(csv_receitas_url)
+            # Renomear colunas conforme a estrutura da aba "bbb"
+            dados_receitas = dados_receitas.rename(columns={"Receita Prevista": "Previsão", "Arrecadada Período": "Arrecadado"})
+            
+            # Limpeza das colunas 'Previsão' e 'Arrecadado'
+            for col in ['Previsão', 'Arrecadado']:
+                dados_receitas[col] = dados_receitas[col].astype(str)
+                dados_receitas[col] = dados_receitas[col].str.replace(r'R\$', '', regex=True).str.strip()
+                dados_receitas[col] = dados_receitas[col].str.replace(r'\.', '', regex=True)
+                dados_receitas[col] = dados_receitas[col].str.replace(',', '.', regex=False)
+                dados_receitas[col] = pd.to_numeric(dados_receitas[col], errors='coerce')
+
+    except Exception as e:
+        st.error(f"Erro ao carregar os dados de receitas: {str(e)}")
+
+    # Calcular totais de receitas
+    total_previsto = dados_receitas['Previsão'].sum()
+    total_arrecadado = dados_receitas['Arrecadado'].sum()
 
     # Seção 2: Resumo Estatístico
     st.subheader("Resumo Estatístico")
@@ -76,7 +72,7 @@ try:
     # Calcular gasto e número de registros por setor
     setores = {
         "Postos de Combustíveis": ["posto", "auto posto", "Combustíveis"],
-        "Farmácia": ["farmácia","Remédio"],
+        "Farmácia": ["farmácia"],
         "Advogados Associados": ["advogados associados", "advogado", "advocacia"],
         "Construção": ["construção", "construtora", "empreendimentos"],
         "Educação": ["escola", "educacional", "educação"],
@@ -96,8 +92,8 @@ try:
     setor_mais_registros = max(registros_por_setor, key=registros_por_setor.get)
     num_registros_mais = registros_por_setor[setor_mais_registros]
 
-    # Exibir resumo em colunas (com 4 colunas para incluir a nova seção)
-    cols_resumo = st.columns(4)
+    # Exibir resumo em colunas (agora com receitas)
+    cols_resumo = st.columns(5)
     with cols_resumo[0]:
         st.metric("Total Gasto", f"R$ {total_gasto:,.2f}")
     with cols_resumo[1]:
@@ -105,21 +101,45 @@ try:
     with cols_resumo[2]:
         st.metric("Setor com Mais Registros", setor_mais_registros, f"{num_registros_mais} registros")
     with cols_resumo[3]:
-        # Adicionar a frase, a nova logo e o link ao lado direito do "Setor com mais registros"
-        st.markdown(
-            f"""
-            <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                <p style="color: #FFFFFF; font-size: 12px; margin: 5px 0;">
-                    ELABORADO POR:
-                </p>
-                <img src="data:image/png;base64,{logo_os_base64}" alt="OS Logo" style="width: 100px; margin: 5px 0;">
-                <a href="https://oscapitaloficial.com.br/" target="_blank" style="color: #1E90FF; font-weight: bold; text-decoration: none; padding: 5px 10px;">
-                    CLIQUE AQUI
-                </a>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        st.metric("Total Previsto (Receitas)", f"R$ {total_previsto:,.2f}")
+    with cols_resumo[4]:
+        st.metric("Total Arrecadado (Receitas)", f"R$ {total_arrecadado:,.2f}")
+
+    # Criar colunas para os gráficos (lado a lado)
+    cols_graficos = st.columns(2)
+
+    # Gráfico de receitas (Previsto vs Arrecadado)
+    with cols_graficos[0]:
+        df_receitas = pd.DataFrame({
+            'Tipo': ['Previsto', 'Arrecadado'],
+            'Valor': [total_previsto, total_arrecadado]
+        })
+        fig = px.bar(df_receitas, x='Tipo', y='Valor', title="Previsto vs Arrecadado",
+                     color='Tipo', color_discrete_map={'Previsto': '#1E90FF', 'Arrecadado': '#32CD32'},
+                     height=200, width=300)
+        fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=30, b=0))
+        st.plotly_chart(fig, use_container_width=False)
+
+    # Gráfico de comparação entre Receitas Previstas e Gastos (Déficit/Superávit)
+    with cols_graficos[1]:
+        df_saldo = pd.DataFrame({
+            'Categoria': ['Receitas Previstas', 'Gastos Projetados'],
+            'Valor': [total_previsto, total_gasto]
+        })
+        fig_saldo = px.bar(df_saldo, x='Categoria', y='Valor', title="Receitas vs Gastos",
+                           color='Categoria', color_discrete_map={'Receitas Previstas': '#1E90FF', 'Gastos Projetados': '#FF6347'},
+                           height=200, width=300)
+        fig_saldo.update_layout(showlegend=False, margin=dict(l=0, r=0, t=30, b=0))
+        st.plotly_chart(fig_saldo, use_container_width=False)
+
+    # Indicar se está deficitário ou superavitário
+    saldo = total_previsto - total_gasto
+    if saldo > 0:
+        st.success(f"Superávit: R$ {saldo:,.2f}")
+    elif saldo < 0:
+        st.error(f"Déficit: R$ {abs(saldo):,.2f}")
+    else:
+        st.info("Saldo Neutro")
 
     # Seção 3: Filtro da Lista de Gastos
     st.subheader("Lista de Gastos")
