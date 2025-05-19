@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime
 
 # Configurações iniciais do dashboard
 st.set_page_config(layout="wide")
@@ -20,6 +22,19 @@ with st.expander("ℹ️ Sobre os Dados"):
 @st.cache_data
 def load_data(url):
     return pd.read_csv(url)
+
+# Função para calcular média nacional ajustada por inflação
+def calcular_media_nacional():
+    custo_fixo_base = 800.00  # Passagem aérea (ida e volta)
+    custo_variavel_base = 240.00  # Hospedagem + alimentação por dia
+    duracao_media = 3  # Duração média de viagem (dias)
+    taxa_inflacao_anual = 0.04  # 4% ao ano (projeção 2025)
+    data_base = datetime(2025, 1, 1)
+    data_atual = datetime.now()
+    dias_passados = (data_atual - data_base).days
+    fator_inflacao = 1 + (taxa_inflacao_anual * (dias_passados / 365))
+    custo_total = (custo_fixo_base + (custo_variavel_base * duracao_media)) * fator_inflacao
+    return custo_total / duracao_media
 
 # URLs do Google Sheets
 csv_gastos_url = "https://docs.google.com/spreadsheets/d/1laPuYWWQD3BJRWI_bpwpGg115Ie7mLrqv_jtH7dPgLk/export?format=csv&gid=741206008"
@@ -64,12 +79,35 @@ try:
         dados_viagens['Saída_Formatada'] = dados_viagens['Saída'].dt.strftime('%d/%m/%y').str.replace(r'^0', '', regex=True).str.replace('/0', '/')
         dados_viagens['Chegada_Formatada'] = dados_viagens['Chegada'].dt.strftime('%d/%m/%y').str.replace(r'^0', '', regex=True).str.replace('/0', '/')
 
+        # Criar coluna para nome abreviado do Favorecido
+        def abreviar_nome(nome):
+            if pd.isna(nome):
+                return ""
+            partes = nome.strip().split()
+            if len(partes) == 0:
+                return ""
+            if len(partes) == 1:
+                return partes[0]
+            # Ignorar termos finais com menos de 2 caracteres
+            while len(partes) > 1 and len(partes[-1]) < 2:
+                partes.pop()
+            if len(partes) == 1:
+                return partes[0]
+            primeiro_nome = " ".join(partes[:-1])
+            sobrenome_abreviado = partes[-1][0] + "." if partes[-1] else ""
+            return f"{primeiro_nome} {sobrenome_abreviado}".strip()
+
+        dados_viagens['Favorecido_Abreviado'] = dados_viagens['Favorecido'].apply(abreviar_nome)
+
         # Limpeza da coluna 'Valor'
         dados_viagens['Valor'] = dados_viagens['Valor'].astype(str)
         dados_viagens['Valor'] = dados_viagens['Valor'].str.replace(r'R\$', '', regex=True).str.strip()
         dados_viagens['Valor'] = dados_viagens['Valor'].str.replace(r'\.', '', regex=True)
         dados_viagens['Valor'] = dados_viagens['Valor'].str.replace(',', '.', regex=False)
         dados_viagens['Valor'] = pd.to_numeric(dados_viagens['Valor'], errors='coerce')
+
+        # Calcular custo diário
+        dados_viagens['Custo_Diario'] = dados_viagens['Valor'] / dados_viagens['Duração']
 
     # Seção: Lista de Gastos
     st.subheader("Lista de Gastos")
@@ -107,26 +145,142 @@ try:
         st.warning("Não foi possível calcular a duração ou os valores das viagens. Verifique os formatos das colunas 'Saída', 'Chegada' e 'Valor' na aba 'Viagens'.")
     else:
         # Filtrar linhas com dados válidos
-        dados_viagens = dados_viagens.dropna(subset=['Saída', 'Chegada', 'Duração', 'Valor', 'Destino', 'Favorecido'])
+        dados_viagens = dados_viagens.dropna(subset=['Saída', 'Chegada', 'Duração', 'Valor', 'Destino', 'Favorecido', 'Favorecido_Abreviado', 'Custo_Diario'])
         if dados_viagens.empty:
             st.warning("Nenhum dado válido encontrado para o gráfico de viagens.")
         else:
-            fig_viagens = px.scatter(
+            # Calcular médias e extremos
+            media_gasto_dia = dados_viagens['Custo_Diario'].mean()
+            media_nacional = calcular_media_nacional()
+            menor_custo_idx = dados_viagens['Custo_Diario'].idxmin()
+            maior_custo_idx = dados_viagens['Custo_Diario'].idxmax()
+            menor_custo = dados_viagens.loc[menor_custo_idx, 'Custo_Diario']
+            maior_custo = dados_viagens.loc[maior_custo_idx, 'Custo_Diario']
+            menor_favorecido = dados_viagens.loc[menor_custo_idx, 'Favorecido_Abreviado']
+            maior_favorecido = dados_viagens.loc[maior_custo_idx, 'Favorecido_Abreviado']
+            menor_favorecido_nome = dados_viagens.loc[menor_custo_idx, 'Favorecido']
+            maior_favorecido_nome = dados_viagens.loc[maior_custo_idx, 'Favorecido']
+
+            # Obter cores do px.scatter para 'Favorecido' com paleta clara
+            temp_fig = px.scatter(
                 dados_viagens,
                 x='Destino',
                 y='Duração',
-                size='Valor',
                 color='Favorecido',
-                hover_data=['Saída_Formatada', 'Chegada_Formatada'],
-                title='Viagens dos Servidores Públicos',
-                height=500
+                color_discrete_sequence=px.colors.qualitative.Plotly
             )
+            color_map = {
+                trace.name: trace.marker.color
+                for trace in temp_fig.data
+            }
+
+            # Exibir métricas abaixo do título, centralizadas
+            st.markdown(
+                """
+                <style>
+                .metric-container { display: flex; justify-content: center; gap: 8px; }
+                .stMetric { margin: 0 3px; max-width: 200px; overflow-wrap: break-word; }
+                .stMetric label { font-size: 14px; }
+                .stMetric div[data-testid="stMetricValue"] { font-size: 16px; }
+                .custom-metric { max-width: 200px; text-align: center; margin: 0 3px; }
+                .custom-metric-title { font-size: 14px; font-weight: bold; }
+                .custom-metric-name { font-size: 16px; }
+                .custom-metric-value { font-size: 16px; font-weight: bold; color: inherit !important; }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+            with st.container():
+                cols = st.columns([1, 1, 1, 1])
+                with cols[0]:
+                    st.metric("MÉDIA DE GASTO POR DIA DA PREFEITURA", f"R$ {media_gasto_dia:,.2f}")
+                with cols[1]:
+                    st.metric("MÉDIA NACIONAL DE CUSTO DIÁRIO", f"R$ {media_nacional:,.2f}")
+                with cols[2]:
+                    st.markdown(
+                        f"""
+                        <div class="custom-metric">
+                            <div class="custom-metric-title">MENOR CUSTO POR DIA</div>
+                            <div class="custom-metric-name">{menor_favorecido}</div>
+                            <div class="custom-metric-value" style="color: {color_map.get(menor_favorecido_nome, '#69B3E7')};">R$ {menor_custo:,.2f}</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                with cols[3]:
+                    st.markdown(
+                        f"""
+                        <div class="custom-metric">
+                            <div class="custom-metric-title">MAIOR CUSTO POR DIA</div>
+                            <div class="custom-metric-name">{maior_favorecido}</div>
+                            <div class="custom-metric-value" style="color: {color_map.get(maior_favorecido_nome, '#EF553B')};">R$ {maior_custo:,.2f}</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+            # Criar figura com go.Scatter para exibir 'Valor' e 'Favorecido_Abreviado' como texto
+            fig_viagens = go.Figure()
+
+            # Formatando 'Valor' para exibir como R$ e combinando com 'Favorecido_Abreviado'
+            dados_viagens['Valor_Text'] = dados_viagens['Valor'].apply(lambda x: f'R$ {x:,.2f}')
+            dados_viagens['Texto_Grafico'] = dados_viagens.apply(lambda row: f"{row['Valor_Text']} - {row['Favorecido_Abreviado']}", axis=1)
+
+            # Agrupar por 'Favorecido' para manter legenda consistente
+            for favorecido in dados_viagens['Favorecido'].unique():
+                df_subset = dados_viagens[dados_viagens['Favorecido'] == favorecido]
+                # Camada de contorno (preto)
+                fig_viagens.add_trace(
+                    go.Scatter(
+                        x=df_subset['Destino'],
+                        y=df_subset['Duração'],
+                        mode='text',
+                        text=df_subset['Texto_Grafico'],
+                        textposition='top center',
+                        textfont=dict(
+                            color='black',  # Contorno preto
+                            size=12
+                        ),
+                        name=favorecido,
+                        showlegend=False,  # Não mostrar na legenda
+                        hoverinfo='skip'   # Não mostrar hover para contorno
+                    )
+                )
+                # Camada principal (cor do favorecido)
+                fig_viagens.add_trace(
+                    go.Scatter(
+                        x=df_subset['Destino'],
+                        y=df_subset['Duração'],
+                        mode='text',
+                        text=df_subset['Texto_Grafico'],
+                        textposition='top center',
+                        textfont=dict(
+                            color=color_map.get(favorecido, '#69B3E7'),
+                            size=12
+                        ),
+                        name=favorecido,
+                        hovertemplate=(
+                            '<b>Favorecido</b>: %{customdata[0]}<br>'
+                            '<b>Destino</b>: %{x}<br>'
+                            '<b>Duração</b>: %{y} dias<br>'
+                            '<b>Saída</b>: %{customdata[1]}<br>'
+                            '<b>Chegada</b>: %{customdata[2]}<br>'
+                            '<b>Valor</b>: R$ %{customdata[3]:,.2f}<extra></extra>'
+                        ),
+                        customdata=df_subset[['Favorecido', 'Saída_Formatada', 'Chegada_Formatada', 'Valor']].values
+                    )
+                )
+
+            # Atualizar layout
             fig_viagens.update_layout(
                 xaxis_title="Destino",
                 yaxis_title="Duração (dias)",
+                title='Viagens dos Servidores Públicos',
                 title_x=0.5,
+                height=500,
                 showlegend=True
             )
+
             st.plotly_chart(fig_viagens, use_container_width=True)
 
     # Seção: Gastos por Setor
