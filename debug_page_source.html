@@ -1,0 +1,24 @@
+<html><head>
+    <meta charset="UTF-8">
+    <title>URL Externa</title>	
+	<style>
+		body {
+			margin: 0px;
+			overflow: hidden;
+		}
+	</style>
+</head>
+<body marginwidth="0" marginheight="0">
+	<object data="https://www.municipioonline.com.br/se/prefeitura/lagarto/cidadao/servidor" type="text/html" id="frame" height="1024" width="1019">
+	</object>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+	$(document).ready(function() {
+		$window = $(window); 
+		$('#frame').attr('height',$window.height());
+		$('#frame').attr('width',$window.width());
+	});	
+</script>
+
+ </body></html>
