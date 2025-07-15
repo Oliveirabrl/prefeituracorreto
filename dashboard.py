@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final e Definitiva)
+# dashboard.py (Versão Final Definitiva, Completa e sem omissões)
 
 import streamlit as st
 import pandas as pd
@@ -9,7 +9,7 @@ import glob
 import re
 
 # ==============================================================================
-# CONFIGURAÇÃO DA PÁGINA E TÍTULOS (AJUSTE FINAL)
+# CONFIGURAÇÃO DA PÁGINA
 # ==============================================================================
 st.set_page_config(layout="wide")
 st.title("📈 Painel de Gastos da Prefeitura de Lagarto")
@@ -94,6 +94,32 @@ def load_general_expenses(file_path):
 # ==============================================================================
 # Seções de Análise e Exibição
 # ==============================================================================
+def display_salary_indicators(data):
+    st.divider()
+    st.header("💡 Indicadores de Salário por Cargo Específico")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Professores")
+        prof_df = data[data['Cargo'].str.contains('PROF', case=False, na=False)]
+        if not prof_df.empty:
+            highest_prof = prof_df.loc[prof_df['Projetado'].idxmax()]
+            lowest_prof = prof_df.loc[prof_df['Projetado'].idxmin()]
+            st.metric(label="Maior Salário (Professor)", value=f"R$ {highest_prof['Projetado']:,.2f}", delta=highest_prof['Credor'], delta_color="off")
+            st.metric(label="Menor Salário (Professor)", value=f"R$ {lowest_prof['Projetado']:,.2f}", delta=lowest_prof['Credor'], delta_color="off")
+        else:
+            st.info("Nenhum cargo contendo 'Prof' foi encontrado nos dados.")
+    with col2:
+        st.subheader("Secretários")
+        search_pattern = 'SECRETÁRIO|SECRETARIO|SECRETARIA|SEC\.'
+        sec_df = data[data['Cargo'].str.contains(search_pattern, case=False, na=False)]
+        if not sec_df.empty:
+            highest_sec = sec_df.loc[sec_df['Projetado'].idxmax()]
+            lowest_sec = sec_df.loc[sec_df['Projetado'].idxmin()]
+            st.metric(label="Maior Salário (Secretário)", value=f"R$ {highest_sec['Projetado']:,.2f}", delta=highest_sec['Credor'], delta_color="off")
+            st.metric(label="Menor Salário (Secretário)", value=f"R$ {lowest_sec['Projetado']:,.2f}", delta=lowest_sec['Credor'], delta_color="off")
+        else:
+            st.info("Nenhum cargo de 'Secretário(a)' (ou variações) foi encontrado nos dados.")
+
 def display_general_expenses_section(data):
     st.divider()
     st.header("🔎 Consulta Rápida de Gastos Gerais")
@@ -137,28 +163,35 @@ def display_expenses_by_category(data):
     if 'Outros' in data['Categoria'].unique() and 'Outros' not in categorias_ordenadas:
         categorias_ordenadas.append('Outros')
 
-    st.write("Clique em uma categoria para ver a lista de gastos:")
-    num_columns = 4
-    cols = st.columns(num_columns)
-    
-    for i, categoria in enumerate(categorias_ordenadas):
-        col = cols[i % num_columns]
-        with col:
-            with st.expander(f"**{categoria}**"):
-                dados_filtrados_cat = data[data['Categoria'] == categoria]
-                total_pago = dados_filtrados_cat['Valor_Pago'].sum()
-                st.metric(label=f"Total Pago", value=f"R$ {total_pago:,.2f}")
-                with st.container(height=300):
-                    st.dataframe(
-                        dados_filtrados_cat[['Data', 'Fornecedor', 'Valor_Pago']].sort_values(by="Data", ascending=False),
-                        use_container_width=True,
-                        hide_index=True
-                    )
+    opcoes_filtro = ["-- Selecione uma Categoria --"] + categorias_ordenadas
+    categoria_selecionada = st.radio(
+        "Selecione uma categoria para ver os detalhes:",
+        options=opcoes_filtro,
+        horizontal=True,
+    )
+
+    if categoria_selecionada != "-- Selecione uma Categoria --":
+        dados_filtrados = data[data['Categoria'] == categoria_selecionada].copy()
+        total_pago = dados_filtrados['Valor_Pago'].sum()
+        total_empenhado = dados_filtrados['Valor_Empenhado'].sum()
+        col1, col2 = st.columns(2)
+        col1.metric(f"Total Pago em {categoria_selecionada}", f"R$ {total_pago:,.2f}")
+        col2.metric(f"Total Empenhado em {categoria_selecionada}", f"R$ {total_empenhado:,.2f}")
+        display_cols = ['Data', 'Fornecedor', 'Valor_Empenhado', 'Valor_Pago']
+        st.dataframe(
+            dados_filtrados[display_cols].sort_values(by="Data", ascending=False),
+            use_container_width=True, hide_index=True,
+            column_config={
+                "Data": st.column_config.DateColumn("Data", format="DD/MM/YYYY"),
+                "Valor_Empenhado": st.column_config.NumberColumn("Valor Empenhado", format="R$ %.2f"),
+                "Valor_Pago": st.column_config.NumberColumn("Valor Pago", format="R$ %.2f"),
+            }
+        )
 
 def display_spending_list_section(data):
     st.divider()
     st.header("Consulta de Gastos com Pessoal")
-    st.caption("Nota: Devido ao processo de coleta de dados, esta seção é atualizada com base em uma consolidação periódica.")
+    st.caption("Nota: Devido à coleta de dados manual, novos dados de pessoal são adicionados à base semestralmente.")
     nome_filtro = st.text_input("Filtrar por nome do servidor:", placeholder="Digite parte do nome ou sobrenome para buscar...")
     if nome_filtro:
         dados_filtrados = data[data['Credor'].str.contains(nome_filtro, case=False, na=False)]
@@ -173,7 +206,7 @@ def display_spending_list_section(data):
 
 def display_nepotism_analysis_section(spending_data):
     st.divider()
-    st.header("🕵️ Análise Interativa de Vínculos por Sobrenome")
+    st.header("🕵️ Análise de Vínculos por Sobrenome")
     with st.expander("Leia-me: Como esta análise funciona?", expanded=False):
         st.info("Esta ferramenta não é uma prova de nepotismo...")
     common_surnames = ['SILVA', 'SANTOS', 'OLIVEIRA', 'SOUZA', 'RODRIGUES', 'FERREIRA', 'ALVES', 'PEREIRA', 'LIMA', 'GOMES', 'COSTA', 'RIBEIRO', 'MARTINS', 'CARVALHO', 'ALMEIDA']
@@ -183,33 +216,42 @@ def display_nepotism_analysis_section(spending_data):
         parts = re.sub(r'[^\w\s]', '', name.upper()).split()
         parts = [p for p in parts if not p.isdigit() and p not in company_terms]
         return parts[-1] if parts else None
+    
     servidores = spending_data[['Credor', 'Cargo']].drop_duplicates().copy()
     servidores['Sobrenome'] = servidores['Credor'].apply(get_last_name)
     servidores.dropna(subset=['Sobrenome'], inplace=True)
     servidores = servidores[~servidores['Sobrenome'].isin(common_surnames)]
+    
     search_pattern = 'SECRETÁRIO|SECRETARIO|SECRETARIA|SEC\.'
     secretarios_df = servidores[servidores['Cargo'].str.contains(search_pattern, case=False, na=False)].copy()
     outros_servidores_df = servidores[~servidores['Cargo'].str.contains(search_pattern, case=False, na=False)].copy()
+    
     if secretarios_df.empty:
         st.warning("Nenhum 'Secretário(a)' (ou variações) foi encontrado para a análise.")
         return
-    st.write(f"Encontrado(s) **{len(secretarios_df)}** secretário(s). Clique no nome para verificar:")
-    num_columns = 3
-    cols = st.columns(num_columns)
-    for i, (index, secretario) in enumerate(secretarios_df.iterrows()):
-        col = cols[i % num_columns]
-        with col:
-            nome_completo, cargo_completo, sobrenome = secretario['Credor'], secretario['Cargo'], secretario['Sobrenome']
-            partes_nome = nome_completo.split()
-            nome_abreviado = f"{partes_nome[0]} {partes_nome[-1]}" if len(partes_nome) > 1 else nome_completo
-            with st.expander(f"**{nome_abreviado}**"):
-                st.caption(f"**Nome:** {nome_completo}\n\n**Cargo:** {cargo_completo}")
-                possiveis_vinculos = outros_servidores_df[outros_servidores_df['Sobrenome'] == sobrenome]
-                if not possiveis_vinculos.empty:
-                    st.write(f"Servidor(es) com o mesmo sobrenome '{sobrenome}':")
-                    st.dataframe(possiveis_vinculos[['Credor', 'Cargo']].rename(columns={'Credor': 'Nome', 'Cargo': 'Cargo'}), use_container_width=True, hide_index=True)
-                else:
-                    st.success(f"Nenhum vínculo encontrado (sobrenome: {sobrenome}).")
+
+    secretarios_df['Nome_Abreviado'] = secretarios_df['Credor'].apply(lambda x: f"{x.split()[0]} {x.split()[-1]}" if len(x.split()) > 1 else x)
+    opcoes_secretarios = ["-- Selecione um Secretário --"] + secretarios_df['Nome_Abreviado'].unique().tolist()
+    
+    secretario_selecionado_abrev = st.radio(
+        "Selecione um secretário para verificar possíveis vínculos:",
+        options=opcoes_secretarios,
+        horizontal=True
+    )
+
+    if secretario_selecionado_abrev != "-- Selecione um Secretário --":
+        secretario_info = secretarios_df[secretarios_df['Nome_Abreviado'] == secretario_selecionado_abrev].iloc[0]
+        sobrenome = secretario_info['Sobrenome']
+        st.info(f"Buscando por servidores com o sobrenome: **{sobrenome}**")
+        possiveis_vinculos = outros_servidores_df[outros_servidores_df['Sobrenome'] == sobrenome]
+        if not possiveis_vinculos.empty:
+            st.write(f"Encontrado(s) **{len(possiveis_vinculos)}** servidor(es) com o mesmo sobrenome:")
+            st.dataframe(
+                possiveis_vinculos[['Credor', 'Cargo']].rename(columns={'Credor': 'Nome do Servidor', 'Cargo': 'Cargo do Servidor'}),
+                use_container_width=True, hide_index=True
+            )
+        else:
+            st.success(f"Nenhum possível vínculo encontrado para {secretario_selecionado_abrev} (sobrenome: {sobrenome}).")
 
 def display_travel_chart_section(travel_data):
     st.divider()
@@ -245,6 +287,10 @@ def main():
         dados_pessoal = load_and_process_spending_data(GASTOS_PESSOAL_FOLDER)
         dados_viagens = load_travel_data(VIAGENS_FILE)
         dados_gastos_gerais = load_general_expenses(GASTOS_GERAIS_FILE)
+
+        # --- NOVA ORDEM DE EXIBIÇÃO ---
+        if not dados_pessoal.empty:
+            display_salary_indicators(dados_pessoal)
 
         display_general_expenses_section(dados_gastos_gerais)
         display_expenses_by_category(dados_gastos_gerais)
