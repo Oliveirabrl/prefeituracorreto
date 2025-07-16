@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final Definitiva com Avisos)
+# dashboard.py (Versão Final, Completa e sem Omissões)
 
 import streamlit as st
 import pandas as pd
@@ -18,7 +18,7 @@ except locale.Error:
     locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil')
 
 st.set_page_config(layout="wide")
-st.title("📊 Painel Analítico da Prefeitura de Lagarto-SE")
+st.title("📈 Painel Analítico da Prefeitura de Lagarto-SE")
 aviso_texto = """
 **Aviso:** Este dashboard utiliza dados públicos disponíveis no site oficial da Prefeitura de Lagarto/Sergipe.  
 O objetivo é promover a transparência e facilitar o acesso às informações sobre os gastos públicos (Lei de Acesso à Informação - Lei nº 12.527/2011).
@@ -34,6 +34,7 @@ COMPANY_TERMS = ['LTDA', 'ME', 'SA', 'EIRELI', 'CIA', 'EPP', 'MEI', 'FILHO', 'JU
 PREPOSITIONS = ['DE', 'DA', 'DO', 'DAS', 'DOS']
 
 def get_surnames_list(full_name):
+    """Extrai uma lista de possíveis sobrenomes de um nome completo, ignorando o primeiro nome e termos comuns."""
     if pd.isna(full_name): return []
     parts = re.sub(r'[^\w\s]', '', full_name.upper()).split()
     surnames = parts[1:]
@@ -41,6 +42,7 @@ def get_surnames_list(full_name):
     return surnames
 
 def abreviar_nome_completo(nome_completo):
+    """Cria uma abreviação mais detalhada do nome para exibição."""
     partes = str(nome_completo).split()
     if len(partes) <= 2: return nome_completo
     primeiro_nome = partes[0]
@@ -281,10 +283,11 @@ def display_secretary_supplier_links(personal_data, general_expenses_data):
 def display_spending_list_section(data):
     st.divider()
     st.header("Consulta de Gastos com Pessoal")
+    meses_pt = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
     min_date = data['Data'].min()
     max_date = data['Data'].max()
-    min_month_str = min_date.strftime('%B de %Y').capitalize()
-    max_month_str = max_date.strftime('%B de %Y').capitalize()
+    min_month_str = f"{meses_pt[min_date.month - 1]} de {min_date.year}"
+    max_month_str = f"{meses_pt[max_date.month - 1]} de {max_date.year}"
     if min_date == max_date:
         date_display = f"Folha de Pagamento Referente a: {min_month_str}"
     else:
@@ -306,7 +309,7 @@ def display_spending_list_section(data):
 def display_nepotism_analysis_section(spending_data):
     st.divider()
     st.header("🕵️ Análise de Vínculos: Secretários vs. Outros Servidores")
-    st.warning("**Atenção:** A análise a seguir é baseada em coincidências de sobrenomes e não representa prova de qualquer irregularidade. É uma ferramenta de cruzamento de dados para apontar casos que possam merecer verificação.")
+    st.warning("**Atenção:** A análise a seguir é baseada em coincidências de sobrenomes e não representa prova de qualquer irregularidade.")
     
     secretarios_df = spending_data[spending_data['Cargo'] == 'SECRETÁRIO(A) MUNICIPAL'].drop_duplicates(subset=['Credor']).copy()
     if secretarios_df.empty:
