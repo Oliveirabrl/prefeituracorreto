@@ -7,19 +7,10 @@ from datetime import datetime
 import os
 import glob
 import re
-import locale
 
 # ==============================================================================
-# CONFIGURAÇÃO DA PÁGINA E DO IDIOMA
+# CONFIGURAÇÃO DA PÁGINA
 # ==============================================================================
-try:
-    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
-except locale.Error:
-    try:
-        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil')
-    except locale.Error:
-        st.error("Locale 'pt_BR' não suportado no sistema. Nomes de meses podem aparecer em inglês.")
-
 st.set_page_config(layout="wide")
 st.title("📈 Painel Analítico da Prefeitura de Lagarto-SE")
 aviso_texto = """
