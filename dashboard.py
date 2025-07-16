@@ -15,7 +15,10 @@ import locale
 try:
     locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
 except locale.Error:
-    locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil')
+    try:
+        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil')
+    except locale.Error:
+        st.error("Locale 'pt_BR' não suportado no sistema. Nomes de meses podem aparecer em inglês.")
 
 st.set_page_config(layout="wide")
 st.title("📈 Painel Analítico da Prefeitura de Lagarto-SE")
@@ -241,7 +244,7 @@ def display_expenses_by_category(data):
 def display_secretary_supplier_links(personal_data, general_expenses_data):
     st.divider()
     st.header("🤝 Análise de Vínculos: Secretários vs. Fornecedores")
-    st.warning("**Atenção:** A análise a seguir é baseada em coincidências de sobrenomes e não representa prova de qualquer irregularidade. É uma ferramenta de cruzamento de dados para apontar casos que possam merecer verificação.")
+    st.warning("**Atenção:** A análise a seguir é baseada em coincidências de sobrenomes e não representa prova de qualquer irregularidade.")
     if personal_data.empty or general_expenses_data.empty:
         st.info("Esta análise requer dados de Pessoal e de Gastos Gerais.")
         return
@@ -263,7 +266,7 @@ def display_secretary_supplier_links(personal_data, general_expenses_data):
         sobrenomes_secretario = [s for s in get_surnames_list(secretario_info['Credor']) if s not in COMMON_SURNAMES]
         
         if not sobrenomes_secretario:
-            st.warning(f"Não foi possível extrair um sobrenome válido (que não seja comum) para {secretario_info['Credor']}.")
+            st.warning(f"Não foi possível extrair um sobrenome válido para {secretario_info['Credor']}.")
         else:
             search_pattern = "|".join(sobrenomes_secretario)
             st.info(f"Buscando por fornecedores que contenham em seu nome: **{', '.join(sobrenomes_secretario)}**")
@@ -283,11 +286,11 @@ def display_secretary_supplier_links(personal_data, general_expenses_data):
 def display_spending_list_section(data):
     st.divider()
     st.header("Consulta de Gastos com Pessoal")
-    meses_pt = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+    meses_pt = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
     min_date = data['Data'].min()
     max_date = data['Data'].max()
-    min_month_str = f"{meses_pt[min_date.month - 1]} de {min_date.year}"
-    max_month_str = f"{meses_pt[max_date.month - 1]} de {max_date.year}"
+    min_month_str = f"{meses_pt[min_date.month]} de {min_date.year}"
+    max_month_str = f"{meses_pt[max_date.month]} de {max_date.year}"
     if min_date == max_date:
         date_display = f"Folha de Pagamento Referente a: {min_month_str}"
     else:
