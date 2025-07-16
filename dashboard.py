@@ -289,8 +289,8 @@ def display_spending_list_section(data):
     meses_pt = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
     min_date = data['Data'].min()
     max_date = data['Data'].max()
-    min_month_str = f"{meses_pt[min_date.month]} de {min_date.year}"
-    max_month_str = f"{meses_pt[max_date.month]} de {max_date.year}"
+    min_month_str = f"{meses_pt.get(min_date.month, '')} de {min_date.year}"
+    max_month_str = f"{meses_pt.get(max_date.month, '')} de {max_date.year}"
     if min_date == max_date:
         date_display = f"Folha de Pagamento Referente a: {min_month_str}"
     else:
