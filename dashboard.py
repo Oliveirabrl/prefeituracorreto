@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Filtro de Salário Mínimo)
+# dashboard.py (Versão Final, com Correção de Leitura de Data)
 
 import streamlit as st
 import pandas as pd
@@ -149,11 +149,15 @@ def load_general_expenses(file_path):
         df.columns = [str(col).strip() for col in df.columns]
         expected_cols = ['Data', 'Credor', 'Empenhado', 'Pago']
         if not all(col in df.columns for col in expected_cols): return pd.DataFrame()
+        
         df_processed = df[expected_cols].copy()
         df_processed.rename(columns={'Credor': 'Fornecedor', 'Empenhado': 'Valor_Empenhado', 'Pago': 'Valor_Pago'}, inplace=True)
         df_processed['Valor_Empenhado'] = clean_monetary_value(df_processed['Valor_Empenhado'])
         df_processed['Valor_Pago'] = clean_monetary_value(df_processed['Valor_Pago'])
-        df_processed['Data'] = pd.to_datetime(df_processed['Data'], errors='coerce')
+        
+        # Adicionado dayfirst=True para interpretar corretamente datas no formato DD/MM/YYYY
+        df_processed['Data'] = pd.to_datetime(df_processed['Data'], errors='coerce', dayfirst=True)
+        
         return df_processed.dropna(subset=['Fornecedor', 'Data', 'Valor_Pago'])
     except Exception: return pd.DataFrame()
 
