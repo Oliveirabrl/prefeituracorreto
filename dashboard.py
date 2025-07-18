@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Correção de Leitura de Data)
+# dashboard.py (Versão Final, com Placeholder de Análise de Preços)
 
 import streamlit as st
 import pandas as pd
@@ -129,8 +129,8 @@ def load_travel_data(file_path):
         df.columns = df.columns.str.strip()
         expected_cols = ['Favorecido', 'Saída', 'Chegada', 'Destino', 'Valor']
         if not all(col in df.columns for col in expected_cols): return pd.DataFrame()
-        df['Saída'] = pd.to_datetime(df['Saída'], errors='coerce')
-        df['Chegada'] = pd.to_datetime(df['Chegada'], errors='coerce')
+        df['Saída'] = pd.to_datetime(df['Saída'], errors='coerce', dayfirst=True)
+        df['Chegada'] = pd.to_datetime(df['Chegada'], errors='coerce', dayfirst=True)
         df['Duração'] = ((df['Chegada'] - df['Saída']).dt.days + 1).fillna(0)
         df = df[(df['Duração'] > 0) & (df['Duração'] <= 30)]
         df['Valor'] = clean_monetary_value(df['Valor'])
@@ -155,7 +155,6 @@ def load_general_expenses(file_path):
         df_processed['Valor_Empenhado'] = clean_monetary_value(df_processed['Valor_Empenhado'])
         df_processed['Valor_Pago'] = clean_monetary_value(df_processed['Valor_Pago'])
         
-        # Adicionado dayfirst=True para interpretar corretamente datas no formato DD/MM/YYYY
         df_processed['Data'] = pd.to_datetime(df_processed['Data'], errors='coerce', dayfirst=True)
         
         return df_processed.dropna(subset=['Fornecedor', 'Data', 'Valor_Pago'])
@@ -233,6 +232,16 @@ def display_general_expenses_section(data):
         else:
             display_cols = ['Data', 'Fornecedor', 'Valor_Empenhado', 'Valor_Pago']
             st.dataframe(dados_filtrados[display_cols].sort_values(by="Data", ascending=False).style.format({'Valor_Empenhado': 'R$ {:,.2f}', 'Valor_Pago': 'R$ {:,.2f}', 'Data': '{:%d/%m/%Y}'}), use_container_width=True)
+
+def display_price_distortion_placeholder():
+    """Exibe um aviso para a futura análise de distorção de preços."""
+    st.divider()
+    st.header("⚖️ Análise de Distorções entre Preços de Licitações e Mercado")
+    st.warning(
+        "🚧 **Em Desenvolvimento:** Esta funcionalidade ainda não está disponível. "
+        "Será implementada futuramente para comparar os preços pagos pela prefeitura "
+        "com valores de referência do mercado."
+    )
 
 def display_expenses_by_category(data):
     st.divider()
@@ -427,6 +436,10 @@ def main():
             st.warning("Nenhum dado de gasto com pessoal encontrado na pasta 'dados_gastos/'. As análises de pessoal estão desativadas.")
 
         display_general_expenses_section(dados_gastos_gerais)
+        
+        # --- Placeholder para nova funcionalidade ---
+        display_price_distortion_placeholder()
+        
         display_expenses_by_category(dados_gastos_gerais)
         
         if not dados_pessoal.empty and not dados_gastos_gerais.empty:
