@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Ano no Termômetro Financeiro)
+# dashboard.py (Versão Final, com Formatação de Moeda Brasileira)
 
 import streamlit as st
 import pandas as pd
@@ -31,14 +31,21 @@ FINANCEIRO_FILE = 'dados_financeiros.json'
 # ==============================================================================
 st.title("📈 Painel Analítico da Prefeitura de Lagarto-SE")
 aviso_texto = """
-**Aviso:** Este dashboard utiliza dados públicos. As informações de Receita e Despesa são atualizadas manualmente a partir do Portal da Transparência.
+**Aviso:** Este dashboard utiliza dados públicos. As informações de Receita e Despesa são atualizadas manually a partir do Portal da Transparência.
 """
 st.info(aviso_texto)
 
 
 # ==============================================================================
-# Funções de Leitura de Dados
+# Funções de Apoio e Formatação
 # ==============================================================================
+def format_brazilian_currency(value):
+    """Formata um número para o padrão de moeda brasileiro (R$ 1.234,56)."""
+    if pd.isna(value) or not isinstance(value, (int, float)):
+        return "N/A"
+    # Usa um truque com substituição para inverter os separadores
+    return f"R$ {value:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
+
 def clean_monetary_value(series):
     """Limpa uma string ou série de strings monetárias para um formato numérico."""
     series = series.astype(str)
@@ -47,6 +54,41 @@ def clean_monetary_value(series):
     series = series.str.replace(',', '.', regex=False)
     return pd.to_numeric(series, errors='coerce')
 
+def get_surnames_list(full_name):
+    if pd.isna(full_name): return []
+    parts = re.sub(r'[^\w\s]', '', full_name.upper()).split()
+    surnames = parts[1:]
+    surnames = [s for s in surnames if s not in COMPANY_TERMS and s not in PREPOSITIONS]
+    return surnames
+
+def abreviar_nome_completo(nome_completo):
+    partes = str(nome_completo).split()
+    if len(partes) <= 2: return nome_completo
+    primeiro_nome = partes[0]
+    ultimo_nome = partes[-1]
+    iniciais_meio = []
+    for parte in partes[1:-1]:
+        if len(parte) <= 3 and parte.lower() in [p.lower() for p in PREPOSITIONS]:
+            iniciais_meio.append(parte)
+        else:
+            iniciais_meio.append(parte[0].upper() + '.')
+    return " ".join([primeiro_nome] + iniciais_meio + [ultimo_nome])
+
+def find_surname_links(target_person_info, source_df, source_name_column):
+    surnames_to_search = [s for s in get_surnames_list(target_person_info['Credor']) if s not in COMMON_SURNAMES]
+    if not surnames_to_search:
+        return pd.DataFrame(), []
+    search_pattern = r"\b(" + "|".join(surnames_to_search) + r")\b"
+    if 'Credor' in source_df.columns and source_name_column == 'Credor':
+        source_df_filtered = source_df[source_df['Credor'] != target_person_info['Credor']]
+    else:
+        source_df_filtered = source_df.copy()
+    linked_df = source_df_filtered[source_df_filtered[source_name_column].str.contains(search_pattern, case=False, na=False, regex=True)]
+    return linked_df, surnames_to_search
+
+# ==============================================================================
+# Funções de Leitura de Dados
+# ==============================================================================
 @st.cache_data
 def load_financial_data(file_path):
     """Lê os dados financeiros como strings de um JSON e os converte para números."""
@@ -129,41 +171,6 @@ def load_general_expenses(file_path):
     except Exception: return pd.DataFrame()
 
 # ==============================================================================
-# Funções de Apoio
-# ==============================================================================
-def get_surnames_list(full_name):
-    if pd.isna(full_name): return []
-    parts = re.sub(r'[^\w\s]', '', full_name.upper()).split()
-    surnames = parts[1:]
-    surnames = [s for s in surnames if s not in COMPANY_TERMS and s not in PREPOSITIONS]
-    return surnames
-
-def abreviar_nome_completo(nome_completo):
-    partes = str(nome_completo).split()
-    if len(partes) <= 2: return nome_completo
-    primeiro_nome = partes[0]
-    ultimo_nome = partes[-1]
-    iniciais_meio = []
-    for parte in partes[1:-1]:
-        if len(parte) <= 3 and parte.lower() in [p.lower() for p in PREPOSITIONS]:
-            iniciais_meio.append(parte)
-        else:
-            iniciais_meio.append(parte[0].upper() + '.')
-    return " ".join([primeiro_nome] + iniciais_meio + [ultimo_nome])
-
-def find_surname_links(target_person_info, source_df, source_name_column):
-    surnames_to_search = [s for s in get_surnames_list(target_person_info['Credor']) if s not in COMMON_SURNAMES]
-    if not surnames_to_search:
-        return pd.DataFrame(), []
-    search_pattern = r"\b(" + "|".join(surnames_to_search) + r")\b"
-    if 'Credor' in source_df.columns and source_name_column == 'Credor':
-        source_df_filtered = source_df[source_df['Credor'] != target_person_info['Credor']]
-    else:
-        source_df_filtered = source_df.copy()
-    linked_df = source_df_filtered[source_df_filtered[source_name_column].str.contains(search_pattern, case=False, na=False, regex=True)]
-    return linked_df, surnames_to_search
-
-# ==============================================================================
 # Seções de Análise e Exibição
 # ==============================================================================
 def display_financial_summary(revenue, expenses):
@@ -176,7 +183,7 @@ def display_financial_summary(revenue, expenses):
     with col1:
         st.markdown("##### Valor Total Arrecadado (Acumulado)")
         if revenue is not None:
-            st.markdown(f"<h2 style='color: #28a745;'>R$ {revenue:,.2f}</h2>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='color: #28a745;'>{format_brazilian_currency(revenue)}</h2>", unsafe_allow_html=True)
         else:
             st.markdown("<h2 style='color: #dc3545;'>Indisponível</h2>", unsafe_allow_html=True)
             st.caption("Verifique o arquivo 'dados_financeiros.json'")
@@ -184,7 +191,7 @@ def display_financial_summary(revenue, expenses):
     with col2:
         st.markdown("##### Valor Orçado Atualizado (Despesa)")
         if expenses is not None:
-            st.markdown(f"<h2 style='color: #dc3545;'>R$ {expenses:,.2f}</h2>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='color: #dc3545;'>{format_brazilian_currency(expenses)}</h2>", unsafe_allow_html=True)
         else:
             st.markdown("<h2 style='color: #dc3545;'>Indisponível</h2>", unsafe_allow_html=True)
             st.caption("Verifique o arquivo 'dados_financeiros.json'")
@@ -197,10 +204,10 @@ def display_main_indicators(personal_data):
         st.subheader("Salários de Professores")
         prof_df = personal_data[personal_data['Cargo'].str.contains('PROF', case=False, na=False)]
         if not prof_df.empty:
-            st.metric("Maior Salário Líquido", f"R$ {prof_df['Projetado'].max():,.2f}", delta=prof_df.loc[prof_df['Projetado'].idxmax()]['Credor'], delta_color="off")
+            st.metric("Maior Salário Líquido", format_brazilian_currency(prof_df['Projetado'].max()), delta=prof_df.loc[prof_df['Projetado'].idxmax()]['Credor'], delta_color="off")
             prof_min_df = prof_df[prof_df['Projetado'] > 1400]
             if not prof_min_df.empty:
-                st.metric("Menor Salário Líquido", f"R$ {prof_min_df['Projetado'].min():,.2f}", delta=prof_min_df.loc[prof_min_df['Projetado'].idxmin()]['Credor'], delta_color="off")
+                st.metric("Menor Salário Líquido", format_brazilian_currency(prof_min_df['Projetado'].min()), delta=prof_min_df.loc[prof_min_df['Projetado'].idxmin()]['Credor'], delta_color="off")
             else:
                 st.metric("Menor Salário Líquido", "N/A", delta="Nenhum acima de R$1400", delta_color="off")
         else:
@@ -209,10 +216,10 @@ def display_main_indicators(personal_data):
         st.subheader("Salários de Secretários")
         sec_df = personal_data[personal_data['Cargo'] == 'SECRETÁRIO(A) MUNICIPAL']
         if not sec_df.empty:
-            st.metric("Maior Salário Líquido", f"R$ {sec_df['Projetado'].max():,.2f}", delta=sec_df.loc[sec_df['Projetado'].idxmax()]['Credor'], delta_color="off")
+            st.metric("Maior Salário Líquido", format_brazilian_currency(sec_df['Projetado'].max()), delta=sec_df.loc[sec_df['Projetado'].idxmax()]['Credor'], delta_color="off")
             sec_min_df = sec_df[sec_df['Projetado'] > 1400]
             if not sec_min_df.empty:
-                st.metric("Menor Salário Líquido", f"R$ {sec_min_df['Projetado'].min():,.2f}", delta=sec_min_df.loc[sec_min_df['Projetado'].idxmin()]['Credor'], delta_color="off")
+                st.metric("Menor Salário Líquido", format_brazilian_currency(sec_min_df['Projetado'].min()), delta=sec_min_df.loc[sec_min_df['Projetado'].idxmin()]['Credor'], delta_color="off")
             else:
                 st.metric("Menor Salário Líquido", "N/A", delta="Nenhum acima de R$1400", delta_color="off")
         else:
@@ -250,7 +257,11 @@ def display_general_expenses_section(data):
             st.warning("Nenhum resultado encontrado para o nome buscado.")
         else:
             display_cols = ['Data', 'Fornecedor', 'Valor_Empenhado', 'Valor_Pago']
-            st.dataframe(dados_filtrados[display_cols].sort_values(by="Data", ascending=False).style.format({'Valor_Empenhado': 'R$ {:,.2f}', 'Valor_Pago': 'R$ {:,.2f}', 'Data': '{:%d/%m/%Y}'}), use_container_width=True)
+            st.dataframe(dados_filtrados[display_cols].sort_values(by="Data", ascending=False).style.format({
+                'Valor_Empenhado': format_brazilian_currency,
+                'Valor_Pago': format_brazilian_currency,
+                'Data': '{:%d/%m/%Y}'
+            }), use_container_width=True)
 
 def display_price_distortion_placeholder():
     st.divider()
@@ -291,18 +302,15 @@ def display_expenses_by_category(data):
         total_pago = dados_filtrados['Valor_Pago'].sum()
         total_empenhado = dados_filtrados['Valor_Empenhado'].sum()
         col1, col2 = st.columns(2)
-        col1.metric(f"Total Pago em {categoria_selecionada}", f"R$ {total_pago:,.2f}")
-        col2.metric(f"Total Empenhado em {categoria_selecionada}", f"R$ {total_empenhado:,.2f}")
+        col1.metric("Total Pago em " + categoria_selecionada, format_brazilian_currency(total_pago))
+        col2.metric("Total Empenhado em " + categoria_selecionada, format_brazilian_currency(total_empenhado))
+        
         display_cols = ['Data', 'Fornecedor', 'Valor_Empenhado', 'Valor_Pago']
-        st.dataframe(
-            dados_filtrados[display_cols].sort_values(by="Data", ascending=False),
-            use_container_width=True, hide_index=True,
-            column_config={
-                "Data": st.column_config.DateColumn("Data", format="DD/MM/YYYY"),
-                "Valor_Empenhado": st.column_config.NumberColumn("Valor Empenhado", format="R$ %.2f"),
-                "Valor_Pago": st.column_config.NumberColumn("Valor Pago", format="R$ %.2f"),
-            }
-        )
+        st.dataframe(dados_filtrados[display_cols].sort_values(by="Data", ascending=False).style.format({
+            'Valor_Empenhado': format_brazilian_currency,
+            'Valor_Pago': format_brazilian_currency,
+            'Data': '{:%d/%m/%Y}'
+        }), use_container_width=True)
 
 def display_secretary_supplier_links(personal_data, general_expenses_data):
     st.divider()
@@ -328,11 +336,9 @@ def display_secretary_supplier_links(personal_data, general_expenses_data):
             if not possiveis_vinculos.empty:
                 vinculos_agrupados = possiveis_vinculos.groupby('Fornecedor')['Valor_Pago'].sum().reset_index().sort_values(by='Valor_Pago', ascending=False)
                 st.write(f"Encontrado(s) **{len(vinculos_agrupados)}** fornecedor(es) com sobrenome compatível:")
-                st.dataframe(
-                    vinculos_agrupados.rename(columns={'Fornecedor': 'Nome do Fornecedor', 'Valor_Pago': 'Total Pago'}),
-                    use_container_width=True, hide_index=True,
-                    column_config={"Total Pago": st.column_config.NumberColumn(format="R$ %.2f")}
-                )
+                st.dataframe(vinculos_agrupados.rename(columns={'Fornecedor': 'Nome do Fornecedor', 'Valor_Pago': 'Total Pago'}).style.format({
+                    'Total Pago': format_brazilian_currency
+                }), use_container_width=True, hide_index=True)
             else:
                 st.success(f"Nenhum possível vínculo encontrado entre fornecedores e {secretario_selecionado_abrev}.")
 
@@ -383,7 +389,10 @@ def display_spending_list_section(data):
             st.warning("Nenhum resultado encontrado para o nome buscado.")
         else:
             st.write(f"Exibindo **{len(display_data)}** registros. Use a barra de rolagem da tabela para ver todos.")
-            st.dataframe(display_data.style.format({'Projetado': 'R$ {:,.2f}', 'Data': '{:%m/%Y}'}), use_container_width=True)
+            st.dataframe(display_data.style.format({
+                'Projetado': format_brazilian_currency,
+                'Data': '{:%m/%Y}'
+            }), use_container_width=True)
     else:
         st.info("Digite no campo acima para pesquisar na lista de servidores.")
 
@@ -393,19 +402,26 @@ def display_travel_chart_section(travel_data):
     if travel_data.empty:
         st.info("Para ativar esta análise, adicione o arquivo 'dados_viagens.xlsx' na pasta principal.")
         return
+    
+    # Pre-formatar valores para o hover do gráfico
+    travel_data['Valor_Formatado'] = travel_data['Valor'].apply(format_brazilian_currency)
+    travel_data['Custo_Diario_Formatado'] = travel_data['Custo_Diario'].apply(format_brazilian_currency)
+
     avg_daily_cost = travel_data['Custo_Diario'].mean()
     min_cost_row = travel_data.loc[travel_data['Custo_Diario'].idxmin()]
     max_cost_row = travel_data.loc[travel_data['Custo_Diario'].idxmax()]
+    
     cols_viagens = st.columns(3)
-    cols_viagens[0].metric("Média de Gasto Diário", f"R$ {avg_daily_cost:,.2f}")
-    cols_viagens[1].metric("Menor Custo Diário", f"R$ {min_cost_row['Custo_Diario']:,.2f}", delta=min_cost_row['Favorecido_Abreviado'], delta_color="off")
-    cols_viagens[2].metric("Maior Custo Diário", f"R$ {max_cost_row['Custo_Diario']:,.2f}", delta=max_cost_row['Favorecido_Abreviado'], delta_color="off")
+    cols_viagens[0].metric("Média de Gasto Diário", format_brazilian_currency(avg_daily_cost))
+    cols_viagens[1].metric("Menor Custo Diário", format_brazilian_currency(min_cost_row['Custo_Diario']), delta=min_cost_row['Favorecido_Abreviado'], delta_color="off")
+    cols_viagens[2].metric("Maior Custo Diário", format_brazilian_currency(max_cost_row['Custo_Diario']), delta=max_cost_row['Favorecido_Abreviado'], delta_color="off")
+    
     fig_viagens = px.scatter(
         travel_data, x='Destino', y='Duração', size='Valor', color='Favorecido',
         hover_name='Favorecido_Abreviado',
-        custom_data=['Saída_Formatada', 'Chegada_Formatada', 'Valor', 'Custo_Diario']
+        custom_data=['Saída_Formatada', 'Chegada_Formatada', 'Valor_Formatado', 'Custo_Diario_Formatado']
     )
-    fig_viagens.update_traces(hovertemplate='<b>%{hovertext}</b><br>Destino: %{x}<br>Duração: %{y} dias<br>Período: %{customdata[0]}-%{customdata[1]}<br>Valor: R$ %{customdata[2]:,.2f}<br>Custo Diário: R$ %{customdata[3]:,.2f}<extra></extra>')
+    fig_viagens.update_traces(hovertemplate='<b>%{hovertext}</b><br>Destino: %{x}<br>Duração: %{y} dias<br>Período: %{customdata[0]}-%{customdata[1]}<br>Valor: %{customdata[2]}<br>Custo Diário: %{customdata[3]}<extra></extra>')
     fig_viagens.update_layout(title='Viagens dos Servidores (Tamanho da bolha representa o valor total)', title_x=0.5, height=500, legend_title="Favorecido")
     st.plotly_chart(fig_viagens, use_container_width=True)
 
