@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Formatação de Moeda Brasileira)
+# dashboard.py (Versão Final, com mais sobrenomes desconsiderados)
 
 import streamlit as st
 import pandas as pd
@@ -14,7 +14,8 @@ import json
 # ==============================================================================
 st.set_page_config(layout="wide")
 
-COMMON_SURNAMES = ['SANTOS', 'SANTANA', 'OLIVEIRA', 'SILVA', 'DIAS', 'SOUZA','ALVES','JESUS','NASCIMENTO','COSTA']
+# ADICIONADO 'ANDRADE' E 'NUNES' À LISTA
+COMMON_SURNAMES = ['SANTOS', 'SANTANA', 'OLIVEIRA', 'SILVA', 'DIAS', 'SOUZA','ALVES','JESUS','NASCIMENTO','COSTA', 'ANDRADE', 'NUNES']
 COMPANY_TERMS = ['LTDA', 'ME', 'SA', 'EIRELI', 'CIA', 'EPP', 'MEI', 'FILHO', 'JUNIOR', 'NETO', 'SOBRINHO', 'SERVICOS', 'COMERCIO', 'INDUSTRIA', 'SOLUCOES', 'TECNOLOGIA', 'ADVOGADOS', 'ASSOCIADOS', 'ENGENHARIA', 'CONSTRUCOES', 'CONSULTORIA']
 PREPOSITIONS = ['DE', 'DA', 'DO', 'DAS', 'DOS']
 MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
@@ -31,7 +32,7 @@ FINANCEIRO_FILE = 'dados_financeiros.json'
 # ==============================================================================
 st.title("📈 Painel Analítico da Prefeitura de Lagarto-SE")
 aviso_texto = """
-**Aviso:** Este dashboard utiliza dados públicos. As informações de Receita e Despesa são atualizadas manually a partir do Portal da Transparência.
+**Aviso:** Este dashboard utiliza dados públicos. As informações de Receita e Despesa são atualizadas manualmente a partir do Portal da Transparência.
 """
 st.info(aviso_texto)
 
@@ -43,7 +44,6 @@ def format_brazilian_currency(value):
     """Formata um número para o padrão de moeda brasileiro (R$ 1.234,56)."""
     if pd.isna(value) or not isinstance(value, (int, float)):
         return "N/A"
-    # Usa um truque com substituição para inverter os separadores
     return f"R$ {value:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
 
 def clean_monetary_value(series):
@@ -277,26 +277,32 @@ def display_expenses_by_category(data):
     st.header("📊 Gastos Gerais por Categoria")
     if data.empty:
         return
+    
     categorias_map = {
         'Postos de Combustíveis': ['posto', 'combustiveis', 'combustivel', 'auto posto'],
         'Advocacia': ['advocacia', 'advogado', 'advogados', 'juridico'],
         'Construção': ['construção', 'construtora', 'engenharia', 'obras', 'cimento', 'material de construcao'],
-        'Limpeza Pública': ['limpeza', 'saneamento', 'residuos', 'coleta de lixo', 'varrição', 'ramac']
+        'Limpeza Pública': ['limpeza', 'saneamento', 'residuos', 'coleta de lixo', 'varrição', 'ramac'],
+        'Locações de Veículos': ['locação', 'locadora', 'aluguel', 'veículos', 'automóveis', 'rent a car']
     }
+    
     def categorizar_fornecedor(fornecedor):
         fornecedor_lower = str(fornecedor).lower()
         for categoria, keywords in categorias_map.items():
             if any(keyword in fornecedor_lower for keyword in keywords):
                 return categoria
         return 'Outros'
+    
     data['Categoria'] = data['Fornecedor'].apply(categorizar_fornecedor)
     categorias_principais = list(categorias_map.keys())
     categorias_ordenadas = ["-- Selecione uma Categoria --"] + categorias_principais + sorted([cat for cat in data['Categoria'].unique() if cat not in categorias_principais])
+    
     categoria_selecionada = st.radio(
         "Selecione uma categoria para ver os detalhes:",
         options=categorias_ordenadas,
         horizontal=True
     )
+
     if categoria_selecionada != "-- Selecione uma Categoria --":
         dados_filtrados = data[data['Categoria'] == categoria_selecionada].copy()
         total_pago = dados_filtrados['Valor_Pago'].sum()
@@ -403,7 +409,6 @@ def display_travel_chart_section(travel_data):
         st.info("Para ativar esta análise, adicione o arquivo 'dados_viagens.xlsx' na pasta principal.")
         return
     
-    # Pre-formatar valores para o hover do gráfico
     travel_data['Valor_Formatado'] = travel_data['Valor'].apply(format_brazilian_currency)
     travel_data['Custo_Diario_Formatado'] = travel_data['Custo_Diario'].apply(format_brazilian_currency)
 
