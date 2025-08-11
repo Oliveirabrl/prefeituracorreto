@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com mais sobrenomes desconsiderados)
+# dashboard.py (Versão Final, com Filtro de Secretaria Refinado)
 
 import streamlit as st
 import pandas as pd
@@ -14,7 +14,6 @@ import json
 # ==============================================================================
 st.set_page_config(layout="wide")
 
-# ADICIONADO 'ANDRADE' E 'NUNES' À LISTA
 COMMON_SURNAMES = ['SANTOS', 'SANTANA', 'OLIVEIRA', 'SILVA', 'DIAS', 'SOUZA','ALVES','JESUS','NASCIMENTO','COSTA', 'ANDRADE', 'NUNES']
 COMPANY_TERMS = ['LTDA', 'ME', 'SA', 'EIRELI', 'CIA', 'EPP', 'MEI', 'FILHO', 'JUNIOR', 'NETO', 'SOBRINHO', 'SERVICOS', 'COMERCIO', 'INDUSTRIA', 'SOLUCOES', 'TECNOLOGIA', 'ADVOGADOS', 'ASSOCIADOS', 'ENGENHARIA', 'CONSTRUCOES', 'CONSULTORIA']
 PREPOSITIONS = ['DE', 'DA', 'DO', 'DAS', 'DOS']
@@ -318,6 +317,74 @@ def display_expenses_by_category(data):
             'Data': '{:%d/%m/%Y}'
         }), use_container_width=True)
 
+def display_expenses_by_secretariat(data):
+    """Filtra e exibe gastos por secretaria."""
+    st.divider()
+    st.header("🏢 Gastos por Secretaria")
+    if data.empty:
+        return
+
+    secretarias_map = {
+        'Saúde (SMS/FMS)': ['saude', 'sms', 'fms'],
+        'Educação (SEMED)': ['educacao', 'semed'],
+        'Assist. Social (FMAS)': ['assistencia social', 'fmas'],
+        'Obras (SEMOB)': ['obras', 'semob'],
+        'Adm. (SEMAD)': ['administracao', 'semad'],
+        'Agricultura (SEMAGRI)': ['agricultura', 'semagri'],
+        'Gabinete (SEGAB)': ['gabinete', 'segab'],
+        'Fazenda (SEMFAZ)': ['fazenda', 'semfaz'],
+        'Meio Amb. (SEMAC/FMMA)': ['meio ambiente', 'semac', 'fmma'],
+        'Des. Social (SEDEST)': ['desenvolvimento social', 'sedest'],
+        'Ordem Púb. (SEMOP)': ['ordem publica', 'semop'],
+        'Cultura (SECULT)': ['cultura', 'secult'],
+        'Esporte (SEJEL)': ['juventude', 'esporte', 'sejel'],
+        'Comunicação (SECOM)': ['comunicacao', 'secom'],
+        'Des. Urbano (SEMDU)': ['desenvolvimento urbano', 'semdu'],
+        'Governo (SEGOV)': ['governo', 'segov'],
+        'Controladoria (CGM)': ['controladoria', 'cgm'],
+        'Procuradoria (PGM)': ['procuradoria', 'pgm'],
+        'Planejamento (SEPLAN)': ['planejamento', 'seplan'],
+        'Outros Órgãos': ['prefeitura municipal de lagarto', 'pml']
+    }
+
+    def categorizar_por_secretaria(fornecedor):
+        fornecedor_lower = str(fornecedor).lower()
+        for nome_curto, keywords in secretarias_map.items():
+            if any(keyword in fornecedor_lower for keyword in keywords):
+                return nome_curto
+        return 'Não Identificado'
+
+    data['Secretaria'] = data['Fornecedor'].apply(categorizar_por_secretaria)
+    
+    secretarias_encontradas = sorted([sec for sec in data['Secretaria'].unique() if sec != 'Não Identificado'])
+    
+    if not secretarias_encontradas:
+        st.info("Nenhum gasto pôde ser associado a uma secretaria específica com base nos dados atuais.")
+        return
+
+    opcoes_secretarias = ["-- Selecione uma Secretaria --"] + secretarias_encontradas
+    
+    secretaria_selecionada = st.radio(
+        "Selecione uma secretaria para ver os detalhes:",
+        options=opcoes_secretarias,
+        horizontal=True
+    )
+
+    if secretaria_selecionada != "-- Selecione uma Secretaria --":
+        dados_filtrados = data[data['Secretaria'] == secretaria_selecionada].copy()
+        total_pago = dados_filtrados['Valor_Pago'].sum()
+        total_empenhado = dados_filtrados['Valor_Empenhado'].sum()
+        col1, col2 = st.columns(2)
+        col1.metric(f"Total Pago em {secretaria_selecionada}", format_brazilian_currency(total_pago))
+        col2.metric(f"Total Empenhado em {secretaria_selecionada}", format_brazilian_currency(total_empenhado))
+        
+        display_cols = ['Data', 'Fornecedor', 'Valor_Empenhado', 'Valor_Pago']
+        st.dataframe(dados_filtrados[display_cols].sort_values(by="Data", ascending=False).style.format({
+            'Valor_Empenhado': format_brazilian_currency,
+            'Valor_Pago': format_brazilian_currency,
+            'Data': '{:%d/%m/%Y}'
+        }), use_container_width=True)
+
 def display_secretary_supplier_links(personal_data, general_expenses_data):
     st.divider()
     st.header("🤝 Análise de Vínculos: Secretários vs. Fornecedores")
@@ -454,6 +521,9 @@ def main():
         display_general_expenses_section(dados_gastos_gerais)
         display_price_distortion_placeholder()
         display_expenses_by_category(dados_gastos_gerais)
+        
+        # Chamada da nova função
+        display_expenses_by_secretariat(dados_gastos_gerais)
         
         if not dados_pessoal.empty and not dados_gastos_gerais.empty:
             display_secretary_supplier_links(dados_pessoal, dados_gastos_gerais)
