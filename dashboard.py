@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Tabela de Festas Oculta por Padrão)
+# dashboard.py (Versão Final, com Análise de Gastos com Combustíveis)
 
 import streamlit as st
 import pandas as pd
@@ -21,7 +21,7 @@ MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6:
 
 # Caminhos dos Arquivos de Dados
 GASTOS_PESSOAL_FOLDER = 'dados_gastos'
-GASTOS_FESTAS_FOLDER = 'dados_festas'
+DADOS_ANUAIS_FOLDER = 'dados_anuais' # <-- PASTA RENOMEADA
 VIAGENS_FILE = 'dados_viagens.xlsx'
 GASTOS_GERAIS_FILE = 'gastos_gerais.xlsx'
 FINANCEIRO_FILE = 'dados_financeiros.json'
@@ -135,8 +135,8 @@ def load_and_process_spending_data(folder_path):
     return pd.concat(monthly_data, ignore_index=True)
 
 @st.cache_data(ttl="1h")
-def load_party_expenses_data(folder_path):
-    """Carrega e consolida dados de despesas anuais da pasta 'dados_festas'."""
+def load_annual_expenses_data(folder_path):
+    """Carrega e consolida dados de despesas anuais da pasta 'dados_anuais'."""
     if not os.path.exists(folder_path):
         return pd.DataFrame()
 
@@ -318,8 +318,8 @@ def display_party_expenses_section(data):
 
     if data.empty:
         st.info(
-            "Para ativar esta análise, crie uma pasta chamada `dados_festas` "
-            "e adicione suas planilhas de despesas anuais (ex: `2023.xlsx`, `2024.xlsx`)."
+            "Para ativar esta análise, crie uma pasta chamada `dados_anuais` "
+            "e adicione suas planilhas de despesas (ex: `2023.xlsx`)."
         )
         return
 
@@ -375,13 +375,75 @@ def display_party_expenses_section(data):
 
     st.subheader("Detalhes por Ano")
     available_years = ["Selecione um ano"] + sorted(yearly_totals['Ano'].unique(), reverse=True)
-    selected_year = st.selectbox("Selecione um ano para ver a lista de fornecedores:", options=available_years)
+    selected_year = st.selectbox("Selecione um ano para ver a lista de fornecedores:", options=available_years, key="party_year_selector")
 
     if selected_year != "Selecione um ano":
         year_details_df = party_expenses_df[party_expenses_df['Ano'] == selected_year].copy()
         year_details_df = year_details_df.groupby('Credor')['Valor_Pago'].sum().reset_index().sort_values(by='Valor_Pago', ascending=False)
         
         st.write(f"**Fornecedores de festas e eventos pagos em {selected_year}:**")
+        st.dataframe(year_details_df.style.format({
+            'Valor_Pago': format_brazilian_currency
+        }), use_container_width=True, hide_index=True)
+
+def display_fuel_expenses_section(data):
+    st.divider()
+    st.header("⛽ Gastos Anuais com Combustíveis")
+
+    if data.empty:
+        st.info(
+            "Para ativar esta análise, certifique-se que a pasta `dados_anuais` "
+            "contém suas planilhas de despesas (ex: `2023.xlsx`)."
+        )
+        return
+
+    KEYWORDS_COMBUSTIVEL = ['POSTO', 'COMBUSTIVEIS', 'COMBUSTIVEL', 'AUTO POSTO']
+
+    def is_fuel_expense(creditor):
+        creditor_upper = str(creditor).upper()
+        return any(keyword in creditor_upper for keyword in KEYWORDS_COMBUSTIVEL)
+
+    data['Gasto_Combustivel'] = data['Credor'].apply(is_fuel_expense)
+    fuel_expenses_df = data[data['Gasto_Combustivel']].copy()
+
+    if fuel_expenses_df.empty:
+        st.warning("Nenhum gasto com combustível foi identificado nos arquivos fornecidos com base nos critérios atuais.")
+        return
+
+    yearly_totals = fuel_expenses_df.groupby('Ano')['Valor_Pago'].sum().reset_index()
+    yearly_totals['Valor_Pago_Formatado'] = yearly_totals['Valor_Pago'].apply(format_brazilian_currency)
+    
+    st.subheader("Total Gasto por Ano")
+    fig = px.bar(
+        yearly_totals,
+        x='Ano',
+        y='Valor_Pago',
+        text='Valor_Pago_Formatado',
+        title="Soma dos Valores Pagos em Combustíveis por Ano"
+    )
+    fig.update_traces(
+        texttemplate='%{text}', 
+        textposition='outside'
+    )
+    
+    max_value = yearly_totals['Valor_Pago'].max()
+    fig.update_layout(
+        yaxis_range=[0, max_value * 1.15],
+        xaxis_title='Ano',
+        yaxis_title='Total Pago'
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("Detalhes por Ano")
+    available_years = ["Selecione um ano"] + sorted(yearly_totals['Ano'].unique(), reverse=True)
+    selected_year = st.selectbox("Selecione um ano para ver a lista de postos:", options=available_years, key="fuel_year_selector")
+
+    if selected_year != "Selecione um ano":
+        year_details_df = fuel_expenses_df[fuel_expenses_df['Ano'] == selected_year].copy()
+        year_details_df = year_details_df.groupby('Credor')['Valor_Pago'].sum().reset_index().sort_values(by='Valor_Pago', ascending=False)
+        
+        st.write(f"**Fornecedores de combustível pagos em {selected_year}:**")
         st.dataframe(year_details_df.style.format({
             'Valor_Pago': format_brazilian_currency
         }), use_container_width=True, hide_index=True)
@@ -609,7 +671,7 @@ def main():
         dados_pessoal_full = load_and_process_spending_data(GASTOS_PESSOAL_FOLDER)
         dados_viagens = load_travel_data(VIAGENS_FILE)
         dados_gastos_gerais = load_general_expenses(GASTOS_GERAIS_FILE)
-        dados_gastos_festas = load_party_expenses_data(GASTOS_FESTAS_FOLDER)
+        dados_anuais = load_annual_expenses_data(DADOS_ANUAIS_FOLDER)
 
         display_financial_summary(total_revenue, total_expenses)
         
@@ -623,7 +685,8 @@ def main():
 
         display_general_expenses_section(dados_gastos_gerais)
         display_price_distortion_placeholder()
-        display_party_expenses_section(dados_gastos_festas)
+        display_party_expenses_section(dados_anuais)
+        display_fuel_expenses_section(dados_anuais) # <-- Nova Seção
         display_expenses_by_category(dados_gastos_gerais)
         display_expenses_by_secretariat(dados_gastos_gerais)
         
