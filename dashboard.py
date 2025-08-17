@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Filtro de Secretaria Refinado)
+# dashboard.py (Versão Final, com Tabela de Festas Oculta por Padrão)
 
 import streamlit as st
 import pandas as pd
@@ -21,6 +21,7 @@ MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6:
 
 # Caminhos dos Arquivos de Dados
 GASTOS_PESSOAL_FOLDER = 'dados_gastos'
+GASTOS_FESTAS_FOLDER = 'dados_festas'
 VIAGENS_FILE = 'dados_viagens.xlsx'
 GASTOS_GERAIS_FILE = 'gastos_gerais.xlsx'
 FINANCEIRO_FILE = 'dados_financeiros.json'
@@ -132,6 +133,46 @@ def load_and_process_spending_data(folder_path):
         except Exception: continue
     if not monthly_data: return pd.DataFrame()
     return pd.concat(monthly_data, ignore_index=True)
+
+@st.cache_data(ttl="1h")
+def load_party_expenses_data(folder_path):
+    """Carrega e consolida dados de despesas anuais da pasta 'dados_festas'."""
+    if not os.path.exists(folder_path):
+        return pd.DataFrame()
+
+    all_files = glob.glob(os.path.join(folder_path, "*.xlsx"))
+    if not all_files:
+        return pd.DataFrame()
+    
+    yearly_data = []
+    for filepath in all_files:
+        try:
+            filename = os.path.basename(filepath)
+            match = re.search(r'(\d{4})', filename)
+            if not match: continue
+            
+            year = int(match.group(1))
+            df = pd.read_excel(filepath)
+            df.columns = [str(col).strip() for col in df.columns]
+            
+            required_cols = ['Credor', 'Pago']
+            if not all(col in df.columns for col in required_cols): continue
+            
+            df_processed = df[required_cols].copy()
+            df_processed['Ano'] = year
+            df_processed.rename(columns={'Pago': 'Valor_Pago'}, inplace=True)
+            df_processed['Valor_Pago'] = clean_monetary_value(df_processed['Valor_Pago'])
+            df_processed.dropna(subset=['Credor', 'Valor_Pago'], inplace=True)
+            
+            yearly_data.append(df_processed)
+        except Exception:
+            continue
+            
+    if not yearly_data:
+        return pd.DataFrame()
+        
+    return pd.concat(yearly_data, ignore_index=True)
+
 
 @st.cache_data(ttl="30m")
 def load_travel_data(file_path):
@@ -271,6 +312,80 @@ def display_price_distortion_placeholder():
         "com valores de referência do mercado."
     )
 
+def display_party_expenses_section(data):
+    st.divider()
+    st.header("🎉 Gastos com Festas e Eventos")
+
+    if data.empty:
+        st.info(
+            "Para ativar esta análise, crie uma pasta chamada `dados_festas` "
+            "e adicione suas planilhas de despesas anuais (ex: `2023.xlsx`, `2024.xlsx`)."
+        )
+        return
+
+    KEYWORDS_FESTAS = [
+        'PRODUCOES', 'PRODUÇÕES', 'ARTISTICA', 'ARTISTICAS', 'ARTÍSTICA', 'ARTÍSTICAS',
+        'EVENTOS', 'SHOW', 'ENTRETENIMENTO', 'MUSIC', 'GRAVACAO', 'GRAVACOES', 'GRAVAÇÃO', 'GRAVAÇÕES',
+        'PALCO', 'BANDA', 'TRIO', 'ILUMINACAO', 'ILUMINAÇÃO', 'SONORIZACAO', 'SONORIZAÇÃO',
+        'PIROTECNIA'
+    ]
+    FORNECEDORES_ESPECIFICOS_FESTAS = [
+        'AGROPLAY LTDA'
+    ]
+
+    def is_party_expense(creditor):
+        creditor_upper = str(creditor).upper()
+        if any(keyword in creditor_upper for keyword in KEYWORDS_FESTAS):
+            return True
+        if creditor_upper in [name.upper() for name in FORNECEDORES_ESPECIFICOS_FESTAS]:
+            return True
+        return False
+
+    data['Gasto_Festa'] = data['Credor'].apply(is_party_expense)
+    party_expenses_df = data[data['Gasto_Festa']].copy()
+
+    if party_expenses_df.empty:
+        st.warning("Nenhum gasto com festas ou eventos foi identificado nos arquivos fornecidos com base nos critérios atuais.")
+        return
+
+    yearly_totals = party_expenses_df.groupby('Ano')['Valor_Pago'].sum().reset_index()
+    yearly_totals['Valor_Pago_Formatado'] = yearly_totals['Valor_Pago'].apply(format_brazilian_currency)
+    
+    st.subheader("Total Gasto por Ano")
+    fig = px.bar(
+        yearly_totals,
+        x='Ano',
+        y='Valor_Pago',
+        text='Valor_Pago_Formatado',
+        title="Soma dos Valores Pagos em Festas e Eventos por Ano"
+    )
+    fig.update_traces(
+        texttemplate='%{text}', 
+        textposition='outside'
+    )
+    
+    max_value = yearly_totals['Valor_Pago'].max()
+    fig.update_layout(
+        yaxis_range=[0, max_value * 1.15],
+        xaxis_title='Ano',
+        yaxis_title='Total Pago'
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("Detalhes por Ano")
+    available_years = ["Selecione um ano"] + sorted(yearly_totals['Ano'].unique(), reverse=True)
+    selected_year = st.selectbox("Selecione um ano para ver a lista de fornecedores:", options=available_years)
+
+    if selected_year != "Selecione um ano":
+        year_details_df = party_expenses_df[party_expenses_df['Ano'] == selected_year].copy()
+        year_details_df = year_details_df.groupby('Credor')['Valor_Pago'].sum().reset_index().sort_values(by='Valor_Pago', ascending=False)
+        
+        st.write(f"**Fornecedores de festas e eventos pagos em {selected_year}:**")
+        st.dataframe(year_details_df.style.format({
+            'Valor_Pago': format_brazilian_currency
+        }), use_container_width=True, hide_index=True)
+
 def display_expenses_by_category(data):
     st.divider()
     st.header("📊 Gastos Gerais por Categoria")
@@ -325,26 +440,13 @@ def display_expenses_by_secretariat(data):
         return
 
     secretarias_map = {
-        'Saúde (SMS/FMS)': ['saude', 'sms', 'fms'],
-        'Educação (SEMED)': ['educacao', 'semed'],
-        'Assist. Social (FMAS)': ['assistencia social', 'fmas'],
-        'Obras (SEMOB)': ['obras', 'semob'],
-        'Adm. (SEMAD)': ['administracao', 'semad'],
-        'Agricultura (SEMAGRI)': ['agricultura', 'semagri'],
-        'Gabinete (SEGAB)': ['gabinete', 'segab'],
-        'Fazenda (SEMFAZ)': ['fazenda', 'semfaz'],
-        'Meio Amb. (SEMAC/FMMA)': ['meio ambiente', 'semac', 'fmma'],
-        'Des. Social (SEDEST)': ['desenvolvimento social', 'sedest'],
-        'Ordem Púb. (SEMOP)': ['ordem publica', 'semop'],
-        'Cultura (SECULT)': ['cultura', 'secult'],
-        'Esporte (SEJEL)': ['juventude', 'esporte', 'sejel'],
-        'Comunicação (SECOM)': ['comunicacao', 'secom'],
-        'Des. Urbano (SEMDU)': ['desenvolvimento urbano', 'semdu'],
-        'Governo (SEGOV)': ['governo', 'segov'],
-        'Controladoria (CGM)': ['controladoria', 'cgm'],
-        'Procuradoria (PGM)': ['procuradoria', 'pgm'],
-        'Planejamento (SEPLAN)': ['planejamento', 'seplan'],
-        'Outros Órgãos': ['prefeitura municipal de lagarto', 'pml']
+        'Saúde (SMS/FMS)': ['saude', 'sms', 'fms'], 'Educação (SEMED)': ['educacao', 'semed'], 'Assist. Social (FMAS)': ['assistencia social', 'fmas'],
+        'Obras (SEMOB)': ['obras', 'semob'], 'Adm. (SEMAD)': ['administracao', 'semad'], 'Agricultura (SEMAGRI)': ['agricultura', 'semagri'],
+        'Gabinete (SEGAB)': ['gabinete', 'segab'], 'Fazenda (SEMFAZ)': ['fazenda', 'semfaz'], 'Meio Amb. (SEMAC/FMMA)': ['meio ambiente', 'semac', 'fmma'],
+        'Des. Social (SEDEST)': ['desenvolvimento social', 'sedest'], 'Ordem Púb. (SEMOP)': ['ordem publica', 'semop'], 'Cultura (SECULT)': ['cultura', 'secult'],
+        'Esporte (SEJEL)': ['juventude', 'esporte', 'sejel'], 'Comunicação (SECOM)': ['comunicacao', 'secom'], 'Des. Urbano (SEMDU)': ['desenvolvimento urbano', 'semdu'],
+        'Governo (SEGOV)': ['governo', 'segov'], 'Controladoria (CGM)': ['controladoria', 'cgm'], 'Procuradoria (PGM)': ['procuradoria', 'pgm'],
+        'Planejamento (SEPLAN)': ['planejamento', 'seplan'], 'Outros Órgãos': ['prefeitura municipal de lagarto', 'pml']
     }
 
     def categorizar_por_secretaria(fornecedor):
@@ -507,6 +609,7 @@ def main():
         dados_pessoal_full = load_and_process_spending_data(GASTOS_PESSOAL_FOLDER)
         dados_viagens = load_travel_data(VIAGENS_FILE)
         dados_gastos_gerais = load_general_expenses(GASTOS_GERAIS_FILE)
+        dados_gastos_festas = load_party_expenses_data(GASTOS_FESTAS_FOLDER)
 
         display_financial_summary(total_revenue, total_expenses)
         
@@ -520,9 +623,8 @@ def main():
 
         display_general_expenses_section(dados_gastos_gerais)
         display_price_distortion_placeholder()
+        display_party_expenses_section(dados_gastos_festas)
         display_expenses_by_category(dados_gastos_gerais)
-        
-        # Chamada da nova função
         display_expenses_by_secretariat(dados_gastos_gerais)
         
         if not dados_pessoal.empty and not dados_gastos_gerais.empty:
