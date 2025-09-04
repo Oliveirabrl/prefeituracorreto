@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Melhorias para Celular)
+# dashboard.py (Versão Final, com Melhorias de Interface)
 
 import streamlit as st
 import pandas as pd
@@ -40,6 +40,23 @@ st.info(aviso_texto)
 # ==============================================================================
 # Funções de Apoio e Formatação
 # ==============================================================================
+def inject_custom_css():
+    """Injeta CSS customizado para melhorar a aparência dos seletores."""
+    st.markdown("""
+        <style>
+            /* Altera a aparência do círculo do botão de rádio não selecionado */
+            div[data-baseweb="radio"] > div:first-child {
+                background-color: transparent !important;
+                border: 2px solid #4F4F4F !important;
+            }
+            /* Altera a aparência do círculo do botão de rádio QUANDO SELECIONADO */
+            div[data-baseweb="radio"] input:checked + div {
+                background-color: #f63366 !important; /* Cor primária do tema */
+                border: 2px solid #f63366 !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
 def format_brazilian_currency(value):
     """Formata um número para o padrão de moeda brasileiro (R$ 1.234,56)."""
     if pd.isna(value) or not isinstance(value, (int, float)):
@@ -662,7 +679,9 @@ def display_travel_chart_section(travel_data):
         height=500, 
         legend_title="Favorecido",
         legend=dict(
-            bgcolor='rgba(0,0,0,0)',
+            bgcolor='#1E1E1E',
+            bordercolor='grey',
+            borderwidth=1,
             font=dict(color='white')
         )
     )
@@ -673,6 +692,8 @@ def display_travel_chart_section(travel_data):
 # ==============================================================================
 def main():
     try:
+        inject_custom_css() # <-- Injeta o CSS para os botões de rádio
+        
         total_revenue, total_expenses = load_financial_data(FINANCEIRO_FILE)
         
         dados_pessoal_full = load_and_process_spending_data(GASTOS_PESSOAL_FOLDER)
@@ -714,3 +735,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
