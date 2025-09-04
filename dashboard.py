@@ -692,7 +692,7 @@ def display_travel_chart_section(travel_data):
 # ==============================================================================
 def main():
     try:
-        inject_custom_css() # <-- Injeta o CSS para os botões de rádio
+        inject_custom_css()
         
         total_revenue, total_expenses = load_financial_data(FINANCEIRO_FILE)
         
