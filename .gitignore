@@ -1,2 +1,17 @@
-*.ipynb
-DASH.PY
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE/Editor specific
+.vscode/
+.idea/
+
+# Ignorar pasta do projeto antigo
+prefeituracorreto
