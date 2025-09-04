@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Análise de Gastos com Combustíveis)
+# dashboard.py (Versão Final, com Correção no Gráfico de Viagens)
 
 import streamlit as st
 import pandas as pd
@@ -21,7 +21,7 @@ MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6:
 
 # Caminhos dos Arquivos de Dados
 GASTOS_PESSOAL_FOLDER = 'dados_gastos'
-DADOS_ANUAIS_FOLDER = 'dados_anuais' # <-- PASTA RENOMEADA
+DADOS_ANUAIS_FOLDER = 'dados_anuais'
 VIAGENS_FILE = 'dados_viagens.xlsx'
 GASTOS_GERAIS_FILE = 'gastos_gerais.xlsx'
 FINANCEIRO_FILE = 'dados_financeiros.json'
@@ -475,8 +475,7 @@ def display_expenses_by_category(data):
     
     categoria_selecionada = st.radio(
         "Selecione uma categoria para ver os detalhes:",
-        options=categorias_ordenadas,
-        horizontal=True
+        options=categorias_ordenadas
     )
 
     if categoria_selecionada != "-- Selecione uma Categoria --":
@@ -530,8 +529,7 @@ def display_expenses_by_secretariat(data):
     
     secretaria_selecionada = st.radio(
         "Selecione uma secretaria para ver os detalhes:",
-        options=opcoes_secretarias,
-        horizontal=True
+        options=opcoes_secretarias
     )
 
     if secretaria_selecionada != "-- Selecione uma Secretaria --":
@@ -562,7 +560,7 @@ def display_secretary_supplier_links(personal_data, general_expenses_data):
         return
     secretarios_df['Nome_Abreviado'] = secretarios_df['Credor'].apply(abreviar_nome_completo)
     opcoes_secretarios = ["-- Selecione um Secretário --"] + sorted(secretarios_df['Nome_Abreviado'].unique().tolist())
-    secretario_selecionado_abrev = st.radio("Selecione um secretário para verificar possíveis vínculos com fornecedores:", options=opcoes_secretarios, horizontal=True, key="supplier_link_radio")
+    secretario_selecionado_abrev = st.radio("Selecione um secretário para verificar possíveis vínculos com fornecedores:", options=opcoes_secretarios)
     if secretario_selecionado_abrev != "-- Selecione um Secretário --":
         secretario_info = secretarios_df[secretarios_df['Nome_Abreviado'] == secretario_selecionado_abrev].iloc[0]
         possiveis_vinculos, sobrenomes_buscados = find_surname_links(secretario_info, general_expenses_data, 'Fornecedor')
@@ -589,7 +587,7 @@ def display_nepotism_analysis_section(personal_data):
         return
     secretarios_df['Nome_Abreviado'] = secretarios_df['Credor'].apply(abreviar_nome_completo)
     opcoes_secretarios = ["-- Selecione um Secretário --"] + sorted(secretarios_df['Nome_Abreviado'].unique().tolist())
-    secretario_selecionado_abrev = st.radio("Selecione um secretário para verificar possíveis vínculos com outros servidores:", options=opcoes_secretarios, horizontal=True, key="nepotism_radio")
+    secretario_selecionado_abrev = st.radio("Selecione um secretário para verificar possíveis vínculos com outros servidores:", options=opcoes_secretarios)
     if secretario_selecionado_abrev != "-- Selecione um Secretário --":
         secretario_info = secretarios_df[secretarios_df['Nome_Abreviado'] == secretario_selecionado_abrev].iloc[0]
         possiveis_vinculos, sobrenomes_buscados = find_surname_links(secretario_info, personal_data, 'Credor')
@@ -658,7 +656,16 @@ def display_travel_chart_section(travel_data):
         custom_data=['Saída_Formatada', 'Chegada_Formatada', 'Valor_Formatado', 'Custo_Diario_Formatado']
     )
     fig_viagens.update_traces(hovertemplate='<b>%{hovertext}</b><br>Destino: %{x}<br>Duração: %{y} dias<br>Período: %{customdata[0]}-%{customdata[1]}<br>Valor: %{customdata[2]}<br>Custo Diário: %{customdata[3]}<extra></extra>')
-    fig_viagens.update_layout(title='Viagens dos Servidores (Tamanho da bolha representa o valor total)', title_x=0.5, height=500, legend_title="Favorecido")
+    fig_viagens.update_layout(
+        title='Viagens dos Servidores (Tamanho da bolha representa o valor total)', 
+        title_x=0.5, 
+        height=500, 
+        legend_title="Favorecido",
+        legend=dict(
+            bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white')
+        )
+    )
     st.plotly_chart(fig_viagens, use_container_width=True)
 
 # ==============================================================================
@@ -686,7 +693,7 @@ def main():
         display_general_expenses_section(dados_gastos_gerais)
         display_price_distortion_placeholder()
         display_party_expenses_section(dados_anuais)
-        display_fuel_expenses_section(dados_anuais) # <-- Nova Seção
+        display_fuel_expenses_section(dados_anuais)
         display_expenses_by_category(dados_gastos_gerais)
         display_expenses_by_secretariat(dados_gastos_gerais)
         
