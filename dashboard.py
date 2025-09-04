@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Melhorias de Interface)
+# Versão Final Completa
 
 import streamlit as st
 import pandas as pd
