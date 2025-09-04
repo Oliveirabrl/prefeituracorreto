@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Correção no Gráfico de Viagens)
+# dashboard.py (Versão Final, com Melhorias para Celular)
 
 import streamlit as st
 import pandas as pd
