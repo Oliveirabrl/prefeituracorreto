@@ -1,4 +1,4 @@
-# Versão Final Completa
+# dashboard.py (Versão Final, com Legenda do Gráfico Ajustada)
 
 import streamlit as st
 import pandas as pd
@@ -44,14 +44,12 @@ def inject_custom_css():
     """Injeta CSS customizado para melhorar a aparência dos seletores."""
     st.markdown("""
         <style>
-            /* Altera a aparência do círculo do botão de rádio não selecionado */
             div[data-baseweb="radio"] > div:first-child {
                 background-color: transparent !important;
                 border: 2px solid #4F4F4F !important;
             }
-            /* Altera a aparência do círculo do botão de rádio QUANDO SELECIONADO */
             div[data-baseweb="radio"] input:checked + div {
-                background-color: #f63366 !important; /* Cor primária do tema */
+                background-color: #f63366 !important;
                 border: 2px solid #f63366 !important;
             }
         </style>
@@ -108,17 +106,13 @@ def find_surname_links(target_person_info, source_df, source_name_column):
 # ==============================================================================
 @st.cache_data
 def load_financial_data(file_path):
-    """Lê os dados financeiros como strings de um JSON e os converte para números."""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        
         revenue_str = data.get("total_arrecadado")
         expenses_str = data.get("total_orcado")
-
         revenue = clean_monetary_value(pd.Series([revenue_str])).iloc[0] if revenue_str else None
         expenses = clean_monetary_value(pd.Series([expenses_str])).iloc[0] if expenses_str else None
-        
         return revenue, expenses
     except (FileNotFoundError, json.JSONDecodeError):
         return None, None
@@ -153,43 +147,29 @@ def load_and_process_spending_data(folder_path):
 
 @st.cache_data(ttl="1h")
 def load_annual_expenses_data(folder_path):
-    """Carrega e consolida dados de despesas anuais da pasta 'dados_anuais'."""
-    if not os.path.exists(folder_path):
-        return pd.DataFrame()
-
+    if not os.path.exists(folder_path): return pd.DataFrame()
     all_files = glob.glob(os.path.join(folder_path, "*.xlsx"))
-    if not all_files:
-        return pd.DataFrame()
-    
+    if not all_files: return pd.DataFrame()
     yearly_data = []
     for filepath in all_files:
         try:
             filename = os.path.basename(filepath)
             match = re.search(r'(\d{4})', filename)
             if not match: continue
-            
             year = int(match.group(1))
             df = pd.read_excel(filepath)
             df.columns = [str(col).strip() for col in df.columns]
-            
             required_cols = ['Credor', 'Pago']
             if not all(col in df.columns for col in required_cols): continue
-            
             df_processed = df[required_cols].copy()
             df_processed['Ano'] = year
             df_processed.rename(columns={'Pago': 'Valor_Pago'}, inplace=True)
             df_processed['Valor_Pago'] = clean_monetary_value(df_processed['Valor_Pago'])
             df_processed.dropna(subset=['Credor', 'Valor_Pago'], inplace=True)
-            
             yearly_data.append(df_processed)
-        except Exception:
-            continue
-            
-    if not yearly_data:
-        return pd.DataFrame()
-        
+        except Exception: continue
+    if not yearly_data: return pd.DataFrame()
     return pd.concat(yearly_data, ignore_index=True)
-
 
 @st.cache_data(ttl="30m")
 def load_travel_data(file_path):
