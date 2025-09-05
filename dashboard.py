@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com todas as correções)
+# dashboard.py (Versão Final, com Gráfico Otimizado para Celular)
 
 import streamlit as st
 import pandas as pd
@@ -662,13 +662,15 @@ def display_travel_chart_section(travel_data):
         title_x=0.5, 
         height=600, 
         legend_title="Favorecido",
+        xaxis_tickangle=-45,
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=-0.3,
+            y=-0.4,
             xanchor="center",
             x=0.5
-        )
+        ),
+        margin=dict(b=200)
     )
     st.plotly_chart(fig_viagens, use_container_width=True)
 
