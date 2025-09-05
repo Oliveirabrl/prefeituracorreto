@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Legenda do Gráfico Ajustada)
+# dashboard.py (Versão Final, com Melhorias de Interface)
 
 import streamlit as st
 import pandas as pd
@@ -656,13 +656,14 @@ def display_travel_chart_section(travel_data):
     fig_viagens.update_layout(
         title='Viagens dos Servidores (Tamanho da bolha representa o valor total)', 
         title_x=0.5, 
-        height=500, 
+        height=600, 
         legend_title="Favorecido",
         legend=dict(
-            bgcolor='#1E1E1E',
-            bordercolor='grey',
-            borderwidth=1,
-            font=dict(color='white')
+            orientation="h",
+            yanchor="bottom",
+            y=-0.3, # Posição abaixo do gráfico
+            xanchor="center",
+            x=0.5
         )
     )
     st.plotly_chart(fig_viagens, use_container_width=True)
