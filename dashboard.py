@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Gráfico Otimizado para Celular)
+# dashboard.py (Versão Final, com todas as funcionalidades e correções de interface)
 
 import streamlit as st
 import pandas as pd
@@ -213,7 +213,7 @@ def load_general_expenses(file_path):
 def display_financial_summary(revenue, expenses):
     st.divider()
     current_year = datetime.now().year
-    st.header(f"🌡️ Termômetro de Ganhos e Gastos - Período: {current_year}")
+    st.header(f"🌡️ Termómetro de Ganhos e Gastos - Período: {current_year}")
     
     col1, col2 = st.columns(2)
 
@@ -223,15 +223,15 @@ def display_financial_summary(revenue, expenses):
             st.markdown(f"<h2 style='color: #28a745;'>{format_brazilian_currency(revenue)}</h2>", unsafe_allow_html=True)
         else:
             st.markdown("<h2 style='color: #dc3545;'>Indisponível</h2>", unsafe_allow_html=True)
-            st.caption("Verifique o arquivo 'dados_financeiros.json'")
+            st.caption("Verifique o ficheiro 'dados_financeiros.json'")
 
     with col2:
-        st.markdown("##### Valor Orçado Atualizado (Despesa)")
+        st.markdown("##### Valor Orçamentado Atualizado (Despesa)")
         if expenses is not None:
             st.markdown(f"<h2 style='color: #dc3545;'>{format_brazilian_currency(expenses)}</h2>", unsafe_allow_html=True)
         else:
             st.markdown("<h2 style='color: #dc3545;'>Indisponível</h2>", unsafe_allow_html=True)
-            st.caption("Verifique o arquivo 'dados_financeiros.json'")
+            st.caption("Verifique o ficheiro 'dados_financeiros.json'")
 
 def display_main_indicators(personal_data):
     st.divider()
@@ -262,7 +262,7 @@ def display_main_indicators(personal_data):
         else:
             st.info("Nenhum 'SECRETÁRIO(A) MUNICIPAL' encontrado.")
     with col3:
-        st.subheader("Vínculos por Sobrenome")
+        st.subheader("Vínculos por Apelido")
         servidores = personal_data[['Credor', 'Cargo']].drop_duplicates()
         secretarios_vinculos_df = servidores[servidores['Cargo'] == 'SECRETÁRIO(A) MUNICIPAL'].copy()
         if not secretarios_vinculos_df.empty:
@@ -276,7 +276,7 @@ def display_main_indicators(personal_data):
                 maior_vinculo = secretarios_vinculos_df.loc[secretarios_vinculos_df['Contagem_Vinculos'].idxmax()]
                 st.metric("Secretário com Mais Vínculos", f"{maior_vinculo['Contagem_Vinculos']} Vínculo(s)", delta=maior_vinculo['Credor'], delta_color="off")
             else:
-                st.info("Nenhum vínculo por sobrenome encontrado.")
+                st.info("Nenhum vínculo por apelido encontrado.")
         else:
             st.info("Nenhum 'SECRETÁRIO(A) MUNICIPAL' encontrado para análise.")
 
@@ -284,7 +284,7 @@ def display_general_expenses_section(data):
     st.divider()
     st.header("🔎 Consulta Rápida de Gastos Gerais")
     if data.empty:
-        st.info("Para ativar as análises de gastos gerais, adicione o arquivo 'gastos_gerais.xlsx'.")
+        st.info("Para ativar as análises de gastos gerais, adicione o ficheiro 'gastos_gerais.xlsx'.")
         return
     filtro_fornecedor = st.text_input("Buscar por nome do Credor/Fornecedor:", placeholder="Digite o nome para buscar em todos os gastos...")
     if filtro_fornecedor:
@@ -316,7 +316,7 @@ def display_party_expenses_section(data):
     if data.empty:
         st.info(
             "Para ativar esta análise, crie uma pasta chamada `dados_anuais` "
-            "e adicione suas planilhas de despesas (ex: `2023.xlsx`)."
+            "e adicione as suas planilhas de despesas (ex: `2023.xlsx`)."
         )
         return
 
@@ -342,7 +342,7 @@ def display_party_expenses_section(data):
     party_expenses_df = data[data['Gasto_Festa']].copy()
 
     if party_expenses_df.empty:
-        st.warning("Nenhum gasto com festas ou eventos foi identificado nos arquivos fornecidos com base nos critérios atuais.")
+        st.warning("Nenhum gasto com festas ou eventos foi identificado nos ficheiros fornecidos com base nos critérios atuais.")
         return
 
     yearly_totals = party_expenses_df.groupby('Ano')['Valor_Pago'].sum().reset_index()
@@ -390,7 +390,7 @@ def display_fuel_expenses_section(data):
     if data.empty:
         st.info(
             "Para ativar esta análise, certifique-se que a pasta `dados_anuais` "
-            "contém suas planilhas de despesas (ex: `2023.xlsx`)."
+            "contém as suas planilhas de despesas (ex: `2023.xlsx`)."
         )
         return
 
@@ -404,7 +404,7 @@ def display_fuel_expenses_section(data):
     fuel_expenses_df = data[data['Gasto_Combustivel']].copy()
 
     if fuel_expenses_df.empty:
-        st.warning("Nenhum gasto com combustível foi identificado nos arquivos fornecidos com base nos critérios atuais.")
+        st.warning("Nenhum gasto com combustível foi identificado nos ficheiros fornecidos com base nos critérios atuais.")
         return
 
     yearly_totals = fuel_expenses_df.groupby('Ano')['Valor_Pago'].sum().reset_index()
@@ -547,7 +547,7 @@ def display_expenses_by_secretariat(data):
 def display_secretary_supplier_links(personal_data, general_expenses_data):
     st.divider()
     st.header("🤝 Análise de Vínculos: Secretários vs. Fornecedores")
-    st.warning("**Atenção:** A análise a seguir é baseada em coincidências de sobrenomes e não representa prova de qualquer irregularidade.")
+    st.warning("**Atenção:** A análise a seguir é baseada em coincidências de apelidos e não representa prova de qualquer irregularidade.")
     if personal_data.empty or general_expenses_data.empty:
         st.info("Esta análise requer dados de Pessoal e de Gastos Gerais.")
         return
@@ -562,12 +562,12 @@ def display_secretary_supplier_links(personal_data, general_expenses_data):
         secretario_info = secretarios_df[secretarios_df['Nome_Abreviado'] == secretario_selecionado_abrev].iloc[0]
         possiveis_vinculos, sobrenomes_buscados = find_surname_links(secretario_info, general_expenses_data, 'Fornecedor')
         if not sobrenomes_buscados:
-            st.warning(f"Não foi possível extrair um sobrenome válido para análise de {secretario_info['Credor']}.")
+            st.warning(f"Não foi possível extrair um apelido válido para análise de {secretario_info['Credor']}.")
         else:
             st.info(f"Buscando por fornecedores que contenham em seu nome: **{', '.join(sobrenomes_buscados)}**")
             if not possiveis_vinculos.empty:
                 vinculos_agrupados = possiveis_vinculos.groupby('Fornecedor')['Valor_Pago'].sum().reset_index().sort_values(by='Valor_Pago', ascending=False)
-                st.write(f"Encontrado(s) **{len(vinculos_agrupados)}** fornecedor(es) com sobrenome compatível:")
+                st.write(f"Encontrado(s) **{len(vinculos_agrupados)}** fornecedor(es) com apelido compatível:")
                 st.dataframe(vinculos_agrupados.rename(columns={'Fornecedor': 'Nome do Fornecedor', 'Valor_Pago': 'Total Pago'}).style.format({
                     'Total Pago': format_brazilian_currency
                 }), use_container_width=True, hide_index=True)
@@ -577,7 +577,7 @@ def display_secretary_supplier_links(personal_data, general_expenses_data):
 def display_nepotism_analysis_section(personal_data):
     st.divider()
     st.header("🕵️ Análise de Vínculos: Secretários vs. Outros Servidores")
-    st.warning("**Atenção:** A análise a seguir é baseada em coincidências de sobrenomes e não representa prova de qualquer irregularidade.")
+    st.warning("**Atenção:** A análise a seguir é baseada em coincidências de apelidos e não representa prova de qualquer irregularidade.")
     secretarios_df = personal_data[personal_data['Cargo'] == 'SECRETÁRIO(A) MUNICIPAL'].drop_duplicates(subset=['Credor']).copy()
     if secretarios_df.empty:
         st.warning("Nenhum cargo de 'SECRETÁRIO(A) MUNICIPAL' encontrado para a análise.")
@@ -589,11 +589,11 @@ def display_nepotism_analysis_section(personal_data):
         secretario_info = secretarios_df[secretarios_df['Nome_Abreviado'] == secretario_selecionado_abrev].iloc[0]
         possiveis_vinculos, sobrenomes_buscados = find_surname_links(secretario_info, personal_data, 'Credor')
         if not sobrenomes_buscados:
-            st.warning(f"Não é possível buscar vínculos para {secretario_info['Credor']}, pois seus sobrenomes são considerados comuns.")
+            st.warning(f"Não é possível buscar vínculos para {secretario_info['Credor']}, pois os seus apelidos são considerados comuns.")
         else:
             st.info(f"Buscando por servidores que contenham em seu nome: **{', '.join(sobrenomes_buscados)}**")
             if not possiveis_vinculos.empty:
-                st.write(f"Encontrado(s) **{len(possiveis_vinculos)}** servidor(es) com sobrenome compatível:")
+                st.write(f"Encontrado(s) **{len(possiveis_vinculos)}** servidor(es) com apelido compatível:")
                 st.dataframe(
                     possiveis_vinculos[['Credor', 'Cargo']].rename(columns={'Credor': 'Nome do Servidor', 'Cargo': 'Cargo do Servidor'}),
                     use_container_width=True, hide_index=True
@@ -613,14 +613,14 @@ def display_spending_list_section(data):
             texto_aviso = ", ".join(meses_formatados[:-1]) + " E " + meses_formatados[-1]
         st.success(f"Meses disponíveis para consulta: **{texto_aviso}**")
     st.caption("Nota: Devido à coleta de dados manual, novos dados de pessoal são adicionados à base semestralmente.")
-    nome_filtro = st.text_input("Filtrar por nome do servidor:", placeholder="Digite parte do nome ou sobrenome para buscar...")
+    nome_filtro = st.text_input("Filtrar por nome do servidor:", placeholder="Digite parte do nome ou apelido para buscar...")
     if nome_filtro:
         dados_filtrados = data[data['Credor'].str.contains(nome_filtro, case=False, na=False)]
         display_data = dados_filtrados.sort_values(by='Projetado', ascending=False)
         if display_data.empty:
             st.warning("Nenhum resultado encontrado para o nome buscado.")
         else:
-            st.write(f"Exibindo **{len(display_data)}** registros. Use a barra de rolagem da tabela para ver todos.")
+            st.write(f"Exibindo **{len(display_data)}** registos. Use a barra de rolagem da tabela para ver todos.")
             st.dataframe(display_data.style.format({
                 'Projetado': format_brazilian_currency,
                 'Data': '{:%m/%Y}'
@@ -632,7 +632,7 @@ def display_travel_chart_section(travel_data):
     st.divider()
     st.header("✈️ Análise de Viagens dos Servidores Públicos")
     if travel_data.empty:
-        st.info("Para ativar esta análise, adicione o arquivo 'dados_viagens.xlsx' na pasta principal.")
+        st.info("Para ativar esta análise, adicione o ficheiro 'dados_viagens.xlsx' na pasta principal.")
         return
     
     travel_data['Valor_Formatado'] = travel_data['Valor'].apply(format_brazilian_currency)
@@ -675,7 +675,7 @@ def display_travel_chart_section(travel_data):
     st.plotly_chart(fig_viagens, use_container_width=True)
 
 # ==============================================================================
-# Corpo Principal do Aplicativo
+# Corpo Principal da Aplicação
 # ==============================================================================
 def main():
     try:
