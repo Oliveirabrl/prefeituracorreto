@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Melhorias de Interface)
+# dashboard.py (Versão Final, com Legenda do Gráfico Otimizada)
 
 import streamlit as st
 import pandas as pd
@@ -648,8 +648,12 @@ def display_travel_chart_section(travel_data):
     cols_viagens[2].metric("Maior Custo Diário", format_brazilian_currency(max_cost_row['Custo_Diario']), delta=max_cost_row['Favorecido_Abreviado'], delta_color="off")
     
     fig_viagens = px.scatter(
-        travel_data, x='Destino', y='Duração', size='Valor', color='Favorecido',
-        hover_name='Favorecido_Abreviado',
+        travel_data, 
+        x='Destino', 
+        y='Duração', 
+        size='Valor', 
+        color='Favorecido_Abreviado',
+        hover_name='Favorecido',
         custom_data=['Saída_Formatada', 'Chegada_Formatada', 'Valor_Formatado', 'Custo_Diario_Formatado']
     )
     fig_viagens.update_traces(hovertemplate='<b>%{hovertext}</b><br>Destino: %{x}<br>Duração: %{y} dias<br>Período: %{customdata[0]}-%{customdata[1]}<br>Valor: %{customdata[2]}<br>Custo Diário: %{customdata[3]}<extra></extra>')
@@ -661,7 +665,7 @@ def display_travel_chart_section(travel_data):
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=-0.3, # Posição abaixo do gráfico
+            y=-0.3,
             xanchor="center",
             x=0.5
         )
@@ -707,7 +711,7 @@ def main():
             display_spending_list_section(dados_pessoal)
 
         if not dados_viagens.empty:
-            display_travel_chart_section(dados_viagens)
+            display_travel_chart_section(dados_anuais)
 
     except Exception as e:
         st.title("🚨 Erro Crítico no Painel")
