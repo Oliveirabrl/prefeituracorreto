@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Legenda do Gráfico Otimizada)
+# dashboard.py (Versão Final, com todas as correções)
 
 import streamlit as st
 import pandas as pd
@@ -711,7 +711,7 @@ def main():
             display_spending_list_section(dados_pessoal)
 
         if not dados_viagens.empty:
-            display_travel_chart_section(dados_anuais)
+            display_travel_chart_section(dados_viagens)
 
     except Exception as e:
         st.title("🚨 Erro Crítico no Painel")
