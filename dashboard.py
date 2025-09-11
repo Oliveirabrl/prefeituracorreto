@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com todas as funcionalidades e correções de interface)
+# dashboard.py (Versão Final, com Layout Limpo)
 
 import streamlit as st
 import pandas as pd
@@ -31,10 +31,6 @@ FINANCEIRO_FILE = 'dados_financeiros.json'
 # TÍTULO E INFORMAÇÕES INICIAIS
 # ==============================================================================
 st.title("📈 Painel Analítico da Prefeitura de Lagarto-SE")
-aviso_texto = """
-**Aviso:** Este dashboard utiliza dados públicos. As informações de Receita e Despesa são atualizadas manualmente a partir do Portal da Transparência.
-"""
-st.info(aviso_texto)
 
 
 # ==============================================================================
@@ -732,7 +728,7 @@ def main():
 
         if not dados_viagens.empty:
             display_travel_chart_section(dados_viagens)
-            
+
     except Exception as e:
         st.title("🚨 Erro Crítico no Painel")
         st.error("Ocorreu um erro inesperado que impediu o carregamento do painel.")
