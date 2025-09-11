@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Categoria Consultorias)
+# dashboard.py (Versão Final, com Disclaimer Genérico)
 
 import streamlit as st
 import pandas as pd
@@ -32,7 +32,7 @@ FINANCEIRO_FILE = 'dados_financeiros.json'
 # ==============================================================================
 st.title("📈 Painel Analítico da Prefeitura de Lagarto-SE")
 aviso_texto = """
-**Aviso:** Este dashboard utiliza dados públicos. As informações de Receita e Despesa são atualizadas manualmente a partir do Portal da Transparência.
+**Aviso:** Este dashboard utiliza dados públicos. Todas informações são atualizadas a partir do Portal da Transparência.
 """
 st.info(aviso_texto)
 
@@ -675,6 +675,24 @@ def display_travel_chart_section(travel_data):
     )
     st.plotly_chart(fig_viagens, use_container_width=True)
 
+def display_footer_and_disclaimer():
+    st.divider()
+    with st.expander("ℹ️ Sobre Este Painel e Isenção de Responsabilidade", expanded=False):
+        st.markdown("""
+        **Fonte dos Dados:**
+        Os dados exibidos neste painel são coletados de fontes públicas, primariamente do Portal da Transparência da Prefeitura de Lagarto-SE, e estão sujeitos à Lei de Acesso à Informação (Lei nº 12.527/2011).
+
+        **Sobre as Análises:**
+        As análises, como as de 'Vínculos por Sobrenome', são geradas por algoritmos que buscam coincidências de nomes e não representam, de forma alguma, uma acusação ou afirmação de nepotismo ou qualquer outra irregularidade. São apenas pontos de partida para investigação e verificação por parte do cidadão.
+
+        **Precisão dos Dados:**
+        Não nos responsabilizamos pela precisão, integridade ou atualidade dos dados brutos fornecidos pela fonte original. O objetivo deste painel é facilitar a visualização e o acesso à informação, e não servir como um documento oficial.
+
+        **Propósito:**
+        Este dashboard é uma iniciativa independente, oferecida gratuitamente como uma ferramenta para promover a cidadania e a transparência.
+        """)
+
+
 # ==============================================================================
 # Corpo Principal do Aplicativo
 # ==============================================================================
@@ -715,6 +733,8 @@ def main():
 
         if not dados_viagens.empty:
             display_travel_chart_section(dados_viagens)
+            
+        display_footer_and_disclaimer()
 
     except Exception as e:
         st.title("🚨 Erro Crítico no Painel")
