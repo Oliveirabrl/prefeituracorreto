@@ -105,8 +105,8 @@ def load_financial_data(file_path):
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        revenue_str = data.get("total_arrecadado")
-        expenses_str = data.get("total_orcado")
+        revenue_str = data.get("Previsão de arrecadaçãodo")
+        expenses_str = data.get("Previsão de Gastos")
         revenue = clean_monetary_value(pd.Series([revenue_str])).iloc[0] if revenue_str else None
         expenses = clean_monetary_value(pd.Series([expenses_str])).iloc[0] if expenses_str else None
         return revenue, expenses
@@ -230,7 +230,7 @@ def display_financial_summary(revenue, expenses):
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("##### Valor Total Arrecadado (Acumulado)")
+        st.markdown("##### Valor Previsto de Arrecadação")
         if revenue is not None:
             st.markdown(f"<h2 style='color: #28a745;'>{format_brazilian_currency(revenue)}</h2>", unsafe_allow_html=True)
         else:
@@ -238,7 +238,7 @@ def display_financial_summary(revenue, expenses):
             st.caption("Verifique o arquivo 'dados_financeiros.json'")
 
     with col2:
-        st.markdown("##### Valor Orçado Atualizado (Despesa)")
+        st.markdown("##### Valor Previsto de Despesas")
         if expenses is not None:
             st.markdown(f"<h2 style='color: #dc3545;'>{format_brazilian_currency(expenses)}</h2>", unsafe_allow_html=True)
         else:
