@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Período de Data Editável)
+# dashboard.py (Versão Final, com todas as funcionalidades e correções de interface)
 
 import streamlit as st
 import pandas as pd
@@ -252,8 +252,6 @@ def display_financial_summary(revenue, expenses, period_year):
             balance = revenue - expenses
             color = "#28a745" if balance >= 0 else "#dc3545"
             st.markdown(f"<h2 style='color: {color};'>{format_brazilian_currency(balance)}</h2>", unsafe_allow_html=True)
-            if balance >= 0:
-                st.success("🎉 Parabéns! As contas estão com saldo positivo!")
         else:
             st.markdown("<h2 style='color: grey;'>N/A</h2>", unsafe_allow_html=True)
             st.caption("Valores indisponíveis")
