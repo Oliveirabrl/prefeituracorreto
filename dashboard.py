@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Layout Limpo)
+# dashboard.py (Versão Final, com todas as funcionalidades e correções de interface)
 
 import streamlit as st
 import pandas as pd
@@ -105,13 +105,14 @@ def load_financial_data(file_path):
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        revenue_str = data.get("Previsão de arrecadaçãodo")
-        expenses_str = data.get("Previsão de Gastos")
+        revenue_str = data.get("previsao_arrecadacao")
+        expenses_str = data.get("previsao_gastos")
+        period_year = data.get("ano_periodo")
         revenue = clean_monetary_value(pd.Series([revenue_str])).iloc[0] if revenue_str else None
         expenses = clean_monetary_value(pd.Series([expenses_str])).iloc[0] if expenses_str else None
-        return revenue, expenses
+        return revenue, expenses, period_year
     except (FileNotFoundError, json.JSONDecodeError):
-        return None, None
+        return None, None, None
 
 @st.cache_data(ttl="30m")
 def load_and_process_spending_data(folder_path):
@@ -222,15 +223,15 @@ def display_about_section():
         Este dashboard é uma iniciativa independente, oferecida gratuitamente como uma ferramenta para promover a cidadania e a transparência.
         """)
 
-def display_financial_summary(revenue, expenses):
+def display_financial_summary(revenue, expenses, period_year):
     st.divider()
-    current_year = datetime.now().year
-    st.header(f"🌡️ Termômetro de Ganhos e Gastos - Período: {current_year}")
+    year_to_display = period_year if period_year else datetime.now().year
+    st.header(f"🌡️ Termômetro de Ganhos e Gastos - Período: {year_to_display}")
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.markdown("##### Valor Previsto de Arrecadação")
+        st.markdown("##### Previsão de Arrecadação")
         if revenue is not None:
             st.markdown(f"<h2 style='color: #28a745;'>{format_brazilian_currency(revenue)}</h2>", unsafe_allow_html=True)
         else:
@@ -238,12 +239,24 @@ def display_financial_summary(revenue, expenses):
             st.caption("Verifique o arquivo 'dados_financeiros.json'")
 
     with col2:
-        st.markdown("##### Valor Previsto de Despesas")
+        st.markdown("##### Previsão de Gastos")
         if expenses is not None:
             st.markdown(f"<h2 style='color: #dc3545;'>{format_brazilian_currency(expenses)}</h2>", unsafe_allow_html=True)
         else:
             st.markdown("<h2 style='color: #dc3545;'>Indisponível</h2>", unsafe_allow_html=True)
             st.caption("Verifique o arquivo 'dados_financeiros.json'")
+    
+    with col3:
+        st.markdown("##### Saldo Previsto")
+        if revenue is not None and expenses is not None:
+            balance = revenue - expenses
+            color = "#28a745" if balance >= 0 else "#dc3545"
+            st.markdown(f"<h2 style='color: {color};'>{format_brazilian_currency(balance)}</h2>", unsafe_allow_html=True)
+            if balance >= 0:
+                st.success("🎉 Parabéns! As contas estão com saldo positivo!")
+        else:
+            st.markdown("<h2 style='color: grey;'>N/A</h2>", unsafe_allow_html=True)
+            st.caption("Valores indisponíveis")
 
 def display_main_indicators(personal_data):
     st.divider()
@@ -694,15 +707,15 @@ def main():
     try:
         inject_custom_css()
         
-        total_revenue, total_expenses = load_financial_data(FINANCEIRO_FILE)
+        total_revenue, total_expenses, period_year = load_financial_data(FINANCEIRO_FILE)
         
         dados_pessoal_full = load_and_process_spending_data(GASTOS_PESSOAL_FOLDER)
         dados_viagens = load_travel_data(VIAGENS_FILE)
         dados_gastos_gerais = load_general_expenses(GASTOS_GERAIS_FILE)
         dados_anuais = load_annual_expenses_data(DADOS_ANUAIS_FOLDER)
 
-        display_financial_summary(total_revenue, total_expenses)
         display_about_section()
+        display_financial_summary(total_revenue, total_expenses, period_year)
         
         dados_pessoal = dados_pessoal_full.copy()
         
