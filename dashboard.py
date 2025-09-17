@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Gráfico Otimizado para Celular)
+# dashboard.py (Versão Final, com Categoria de Locações Corrigida)
 
 import streamlit as st
 import pandas as pd
@@ -479,7 +479,7 @@ def display_expenses_by_category(data):
         'Advocacia': ['advocacia', 'advogado', 'advogados', 'juridico'],
         'Construção': ['construção', 'construtora', 'engenharia', 'obras', 'cimento', 'material de construcao'],
         'Limpeza Pública': ['limpeza', 'saneamento', 'residuos', 'coleta de lixo', 'varrição', 'ramac'],
-        'Locações de Veículos': ['locação', 'locadora', 'aluguel', 'veículos', 'automóveis', 'rent a car'],
+        'Locações de Veículos': ['locação', 'locacoes', 'locadora', 'aluguel', 'veículos', 'automóveis', 'rent a car', 'unir'],
         'Consultorias': ['consultoria', 'consultorias', 'assessoria', 'projetos', 'auditoria']
     }
     
