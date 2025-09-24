@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final, com Categoria de Locações Corrigida)
+# dashboard.py (Versão Final Completa - 24/09/2025)
 
 import streamlit as st
 import pandas as pd
@@ -138,7 +138,9 @@ def load_and_process_spending_data(folder_path):
             month, year = month_map.get(month_name), int(year_str)
             df_processed['Data'] = datetime(year, month, 1)
             monthly_data.append(df_processed)
-        except Exception: continue
+        except Exception as e:
+            print(f"ALERTA: Falha ao processar o arquivo de pessoal '{filename}'. Erro: {e}")
+            continue
     if not monthly_data: return pd.DataFrame()
     return pd.concat(monthly_data, ignore_index=True)
 
@@ -149,22 +151,31 @@ def load_annual_expenses_data(folder_path):
     if not all_files: return pd.DataFrame()
     yearly_data = []
     for filepath in all_files:
+        filename = os.path.basename(filepath)
         try:
-            filename = os.path.basename(filepath)
-            match = re.search(r'(\d{4})', filename)
+            match = re.search(r'(\d{4})\.xlsx', filename.lower())
             if not match: continue
+            
             year = int(match.group(1))
             df = pd.read_excel(filepath)
             df.columns = [str(col).strip() for col in df.columns]
+            
             required_cols = ['Credor', 'Pago']
-            if not all(col in df.columns for col in required_cols): continue
+            if not all(col in df.columns for col in required_cols):
+                print(f"ALERTA: Arquivo '{filename}' ignorado. Colunas necessárias {required_cols} não encontradas.")
+                continue
+
             df_processed = df[required_cols].copy()
             df_processed['Ano'] = year
             df_processed.rename(columns={'Pago': 'Valor_Pago'}, inplace=True)
             df_processed['Valor_Pago'] = clean_monetary_value(df_processed['Valor_Pago'])
             df_processed.dropna(subset=['Credor', 'Valor_Pago'], inplace=True)
             yearly_data.append(df_processed)
-        except Exception: continue
+
+        except Exception as e:
+            print(f"ALERTA: Falha ao processar o arquivo anual '{filename}'. Erro: {e}")
+            continue
+            
     if not yearly_data: return pd.DataFrame()
     return pd.concat(yearly_data, ignore_index=True)
 
@@ -468,6 +479,83 @@ def display_fuel_expenses_section(data):
             'Valor_Pago': format_brazilian_currency
         }), use_container_width=True, hide_index=True)
 
+def display_top_suppliers_section(data):
+    st.divider()
+    st.header("🏆 As Top 5 Campeãs de Lagarto")
+
+    if data.empty:
+        st.info("Dados anuais insuficientes para gerar o ranking.")
+        return
+
+    INTERNAL_KEYWORDS = ['INSTITUTO', 'PREFEITURA', 'MUNICIPAL', 'FUNDO', 'ENERGISA', 'TRIBUNAL', 'JUSTICA', 'ASSOCIACAO', 'ASSOSSIAÇÃO']
+    
+    def is_internal_or_utility(creditor):
+        creditor_upper = str(creditor).upper()
+        # Adiciona a condição para desconsiderar "Secretaria"
+        if "SECRETARIA" in creditor_upper:
+            return True
+        return any(keyword in creditor_upper for keyword in INTERNAL_KEYWORDS)
+
+    # Filtra fornecedores internos/utilitários E secretarias
+    external_suppliers_df = data[~data['Credor'].apply(is_internal_or_utility)].copy()
+
+    if external_suppliers_df.empty:
+        st.warning("Nenhum fornecedor externo relevante encontrado para gerar o ranking (após filtrar internos/secretarias).")
+        return
+
+    # Obter anos disponíveis e criar seletor
+    available_years = sorted(external_suppliers_df['Ano'].unique(), reverse=True)
+    if not available_years:
+        st.warning("Nenhum ano com dados relevantes de fornecedores externos.")
+        return
+
+    selected_year = st.selectbox("Selecione o Ano para a Análise das Top 5:", options=available_years, key="top_5_year_selector")
+
+    st.subheader(f"As 5 Empresas que Mais Receberam em {selected_year}")
+
+    # Filtrar dados para o ano selecionado
+    year_data = external_suppliers_df[external_suppliers_df['Ano'] == selected_year]
+
+    if year_data.empty:
+        st.warning(f"Não há dados de fornecedores externos relevantes para o ano de {selected_year}.")
+        return
+
+    # Calcular Top 5 para o ano selecionado
+    top_5_suppliers = year_data.groupby('Credor')['Valor_Pago'].sum().nlargest(5).reset_index()
+
+    if top_5_suppliers.empty:
+        st.warning(f"Não foi possível identificar as Top 5 empresas para o ano de {selected_year}.")
+        return
+
+    # Adicionar coluna formatada para exibição no gráfico e na tabela
+    top_5_suppliers['Valor_Pago_Formatado'] = top_5_suppliers['Valor_Pago'].apply(format_brazilian_currency)
+
+    # Gráfico de Pizza (Pie Chart)
+    fig_pie = px.pie(
+        top_5_suppliers,
+        values='Valor_Pago',
+        names='Credor',
+        title=f'Distribuição dos Gastos entre as Top 5 Empresas em {selected_year}',
+        hole=0.3 # Para um gráfico de donut
+    )
+    fig_pie.update_traces(
+        textinfo='percent+label', # Mostra percentual e nome
+        texttemplate='%{label}: %{percent}', # Formato do texto dentro da pizza
+        hovertemplate='<b>%{label}</b><br>Total Pago: %{customdata[0]}<br>Percentual: %{percent}<extra></extra>',
+        customdata=top_5_suppliers[['Valor_Pago_Formatado']].values
+    )
+    fig_pie.update_layout(showlegend=False) # Não mostrar a legenda padrão, o texto na pizza já é suficiente
+    st.plotly_chart(fig_pie, use_container_width=True)
+
+    st.subheader(f"Detalhes das Top 5 de {selected_year}")
+    # Tabela com detalhes das Top 5
+    st.dataframe(
+        top_5_suppliers[['Credor', 'Valor_Pago']].style.format({'Valor_Pago': format_brazilian_currency}),
+        use_container_width=True,
+        hide_index=True
+    )
+
+
 def display_expenses_by_category(data):
     st.divider()
     st.header("📊 Gastos Gerais por Categoria")
@@ -706,7 +794,6 @@ def main():
         inject_custom_css()
         
         total_revenue, total_expenses, period_year = load_financial_data(FINANCEIRO_FILE)
-        
         dados_pessoal_full = load_and_process_spending_data(GASTOS_PESSOAL_FOLDER)
         dados_viagens = load_travel_data(VIAGENS_FILE)
         dados_gastos_gerais = load_general_expenses(GASTOS_GERAIS_FILE)
@@ -727,6 +814,7 @@ def main():
         display_price_distortion_placeholder()
         display_party_expenses_section(dados_anuais)
         display_fuel_expenses_section(dados_anuais)
+        display_top_suppliers_section(dados_anuais)
         display_expenses_by_category(dados_gastos_gerais)
         display_expenses_by_secretariat(dados_gastos_gerais)
         
@@ -747,4 +835,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
