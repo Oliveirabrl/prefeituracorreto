@@ -536,15 +536,23 @@ def display_top_suppliers_section(data):
         values='Valor_Pago',
         names='Credor',
         title=f'Distribuição dos Gastos entre as Top 5 Empresas em {selected_year}',
-        hole=0.3 # Para um gráfico de donut
+        hole=0.3
     )
+    # Atualiza os traços para colocar o texto DENTRO da pizza
     fig_pie.update_traces(
-        textinfo='percent+label', # Mostra percentual e nome
-        texttemplate='%{label}: %{percent}', # Formato do texto dentro da pizza
+        textposition='inside',
+        # Mostra o percentual e o valor formatado em Reais
+        texttemplate='%{percent}<br>%{customdata[0]}',
         hovertemplate='<b>%{label}</b><br>Total Pago: %{customdata[0]}<br>Percentual: %{percent}<extra></extra>',
-        customdata=top_5_suppliers[['Valor_Pago_Formatado']].values
+        customdata=top_5_suppliers[['Valor_Pago_Formatado']].values,
+        textfont_size=14 # Aumenta um pouco a fonte para melhor leitura
     )
-    fig_pie.update_layout(showlegend=False) # Não mostrar a legenda padrão, o texto na pizza já é suficiente
+    # Habilita a legenda para que os nomes das empresas apareçam ao lado
+    fig_pie.update_layout(
+        showlegend=True,
+        legend_title_text='Fornecedores'
+        )
+    
     st.plotly_chart(fig_pie, use_container_width=True)
 
     st.subheader(f"Detalhes das Top 5 de {selected_year}")
