@@ -1,4 +1,4 @@
-# dashboard.py (Versão Final Completa - 24/09/2025)
+# dashboard.py (Versão Final Completa - 25/09/2025)
 
 import streamlit as st
 import pandas as pd
@@ -481,7 +481,8 @@ def display_fuel_expenses_section(data):
 
 def display_top_suppliers_section(data):
     st.divider()
-    st.header("🏆 As Top 5 Campeãs de Lagarto")
+    N_CAMPEAS = 8 # Define o número de empresas a serem exibidas
+    st.header(f"🏆 As Top {N_CAMPEAS} Campeãs de Lagarto")
 
     if data.empty:
         st.info("Dados anuais insuficientes para gerar o ranking.")
@@ -491,78 +492,66 @@ def display_top_suppliers_section(data):
     
     def is_internal_or_utility(creditor):
         creditor_upper = str(creditor).upper()
-        # Adiciona a condição para desconsiderar "Secretaria"
         if "SECRETARIA" in creditor_upper:
             return True
         return any(keyword in creditor_upper for keyword in INTERNAL_KEYWORDS)
 
-    # Filtra fornecedores internos/utilitários E secretarias
     external_suppliers_df = data[~data['Credor'].apply(is_internal_or_utility)].copy()
 
     if external_suppliers_df.empty:
         st.warning("Nenhum fornecedor externo relevante encontrado para gerar o ranking (após filtrar internos/secretarias).")
         return
 
-    # Obter anos disponíveis e criar seletor
     available_years = sorted(external_suppliers_df['Ano'].unique(), reverse=True)
     if not available_years:
         st.warning("Nenhum ano com dados relevantes de fornecedores externos.")
         return
 
-    selected_year = st.selectbox("Selecione o Ano para a Análise das Top 5:", options=available_years, key="top_5_year_selector")
+    selected_year = st.selectbox(f"Selecione o Ano para a Análise das Top {N_CAMPEAS}:", options=available_years, key="top_n_year_selector")
 
-    st.subheader(f"As 5 Empresas que Mais Receberam em {selected_year}")
+    st.subheader(f"As {N_CAMPEAS} Empresas que Mais Receberam em {selected_year}")
 
-    # Filtrar dados para o ano selecionado
     year_data = external_suppliers_df[external_suppliers_df['Ano'] == selected_year]
 
     if year_data.empty:
         st.warning(f"Não há dados de fornecedores externos relevantes para o ano de {selected_year}.")
         return
 
-    # Calcular Top 5 para o ano selecionado
-    top_5_suppliers = year_data.groupby('Credor')['Valor_Pago'].sum().nlargest(5).reset_index()
+    top_n_suppliers = year_data.groupby('Credor')['Valor_Pago'].sum().nlargest(N_CAMPEAS).reset_index()
 
-    if top_5_suppliers.empty:
-        st.warning(f"Não foi possível identificar as Top 5 empresas para o ano de {selected_year}.")
+    if top_n_suppliers.empty:
+        st.warning(f"Não foi possível identificar as Top {N_CAMPEAS} empresas para o ano de {selected_year}.")
         return
 
-    # Adicionar coluna formatada para exibição no gráfico e na tabela
-    top_5_suppliers['Valor_Pago_Formatado'] = top_5_suppliers['Valor_Pago'].apply(format_brazilian_currency)
+    top_n_suppliers['Valor_Pago_Formatado'] = top_n_suppliers['Valor_Pago'].apply(format_brazilian_currency)
 
-    # Gráfico de Pizza (Pie Chart)
     fig_pie = px.pie(
-        top_5_suppliers,
+        top_n_suppliers,
         values='Valor_Pago',
         names='Credor',
-        title=f'Distribuição dos Gastos entre as Top 5 Empresas em {selected_year}',
+        title=f'Distribuição dos Gastos entre as Top {N_CAMPEAS} Empresas em {selected_year}',
         hole=0.3
     )
-    # Atualiza os traços para colocar o texto DENTRO da pizza
     fig_pie.update_traces(
         textposition='inside',
-        # Mostra o percentual e o valor formatado em Reais
         texttemplate='%{percent}<br>%{customdata[0]}',
         hovertemplate='<b>%{label}</b><br>Total Pago: %{customdata[0]}<br>Percentual: %{percent}<extra></extra>',
-        customdata=top_5_suppliers[['Valor_Pago_Formatado']].values,
-        textfont_size=14 # Aumenta um pouco a fonte para melhor leitura
+        customdata=top_n_suppliers[['Valor_Pago_Formatado']].values,
+        textfont_size=14
     )
-    # Habilita a legenda para que os nomes das empresas apareçam ao lado
     fig_pie.update_layout(
         showlegend=True,
         legend_title_text='Fornecedores'
-        )
+    )
     
     st.plotly_chart(fig_pie, use_container_width=True)
 
-    st.subheader(f"Detalhes das Top 5 de {selected_year}")
-    # Tabela com detalhes das Top 5
+    st.subheader(f"Detalhes das Top {N_CAMPEAS} de {selected_year}")
     st.dataframe(
-        top_5_suppliers[['Credor', 'Valor_Pago']].style.format({'Valor_Pago': format_brazilian_currency}),
+        top_n_suppliers[['Credor', 'Valor_Pago']].style.format({'Valor_Pago': format_brazilian_currency}),
         use_container_width=True,
         hide_index=True
     )
-
 
 def display_expenses_by_category(data):
     st.divider()
